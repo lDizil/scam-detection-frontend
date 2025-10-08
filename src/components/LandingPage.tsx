@@ -1,7 +1,6 @@
-﻿import React from 'react';
-import { Button } from './ui/button';
+﻿import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Shield, Brain, CheckCircle, Users, BarChart3, Lock } from 'lucide-react';
+import { Shield, Brain, CheckCircle, Lock } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface LandingPageProps {

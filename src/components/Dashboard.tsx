@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -6,7 +6,6 @@ import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle, Home } from 
 import { ContentAnalyzer } from './ContentAnalyzer';
 import { AnalysisHistory } from './AnalysisHistory';
 import { StatsOverview } from './StatsOverview';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
