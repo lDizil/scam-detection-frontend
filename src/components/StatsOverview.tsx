@@ -34,13 +34,11 @@ export function StatsOverview({ userId }: StatsOverviewProps) {
   const [stats, setStats] = useState<StatsData | null>(null);
 
   useEffect(() => {
-    // Загружаем историю и вычисляем статистику
     const savedHistory = localStorage.getItem(`fraudAnalysis_${userId}`);
     if (savedHistory) {
       const history: AnalysisResult[] = JSON.parse(savedHistory);
       calculateStats(history);
     } else {
-      // Если истории нет, создаем пустую статистику
       setStats({
         totalAnalyses: 0,
         safeCount: 0,
@@ -68,7 +66,6 @@ export function StatsOverview({ userId }: StatsOverviewProps) {
       ? Math.round(history.reduce((sum, item) => sum + item.processingTime, 0) / totalAnalyses)
       : 0;
 
-    // Подсчет по типам контента
     const typeBreakdown = [
       { type: 'Текст', count: history.filter(item => item.type === 'text').length },
       { type: 'Изображения', count: history.filter(item => item.type === 'image').length },
@@ -76,7 +73,6 @@ export function StatsOverview({ userId }: StatsOverviewProps) {
       { type: 'URL', count: history.filter(item => item.type === 'url').length }
     ].filter(item => item.count > 0);
 
-    // Статистика по дням (последние 7 дней)
     const dailyStats = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
@@ -207,9 +203,12 @@ export function StatsOverview({ userId }: StatsOverviewProps) {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value, percent }) => 
-                        `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
-                      }
+                      label={(props: any) => {
+                        const { name, percent } = props;
+                        const entry = statusData.find(item => item.name === name);
+                        const value = entry?.value ?? 0;
+                        return `${name}: ${value} (${((percent ?? 0) * 100).toFixed(0)}%)`;
+                      }}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -289,4 +288,3 @@ export function StatsOverview({ userId }: StatsOverviewProps) {
     </div>
   );
 }
-

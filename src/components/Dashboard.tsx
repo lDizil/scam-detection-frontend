@@ -6,6 +6,7 @@ import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle, Home } from 
 import { ContentAnalyzer } from './ContentAnalyzer';
 import { AnalysisHistory } from './AnalysisHistory';
 import { StatsOverview } from './StatsOverview';
+import { Link } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -26,16 +27,13 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity cursor-pointer">
             <Shield className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl">FraudGuard AI</span>
-          </div>
+            <span className="text-2xl font-bold">FraudGuard AI</span>
+          </Link>
+
           
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => window.location.href = '/'}>
-              <Home className="h-4 w-4 mr-2" />
-              На главную
-            </Button>
             <div className="text-sm">
               <p className="text-gray-600">Добро пожаловать,</p>
               <p>{user.name}</p>

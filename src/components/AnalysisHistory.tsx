@@ -30,7 +30,6 @@ export function AnalysisHistory({ userId }: AnalysisHistoryProps) {
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
   useEffect(() => {
-    // Загружаем историю из localStorage
     const savedHistory = localStorage.getItem(`fraudAnalysis_${userId}`);
     if (savedHistory) {
       const parsedHistory = JSON.parse(savedHistory);
@@ -40,7 +39,6 @@ export function AnalysisHistory({ userId }: AnalysisHistoryProps) {
   }, [userId]);
 
   useEffect(() => {
-    // Фильтрация истории
     let filtered = history;
 
     if (searchTerm) {

@@ -30,10 +30,8 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
     }
 
     setIsLoading(true);
-    
-    // Имитация API вызова
+
     setTimeout(() => {
-      // Проверяем есть ли пользователь в localStorage (имитация базы данных)
       const users = JSON.parse(localStorage.getItem('fraudDetectionUsers') || '[]');
       const user = users.find((u: any) => u.email === loginData.email && u.password === loginData.password);
       
@@ -66,18 +64,15 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
 
     setIsLoading(true);
 
-    // Имитация API вызова
     setTimeout(() => {
       const users = JSON.parse(localStorage.getItem('fraudDetectionUsers') || '[]');
-      
-      // Проверяем, существует ли пользователь
+
       if (users.find((u: any) => u.email === registerData.email)) {
         toast.error('Пользователь с таким email уже существует');
         setIsLoading(false);
         return;
       }
 
-      // Создаем нового пользователя
       const newUser = {
         id: Date.now().toString(),
         name: registerData.name,

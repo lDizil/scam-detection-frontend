@@ -40,13 +40,11 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
   ];
 
   const mockAnalyze = async (): Promise<AnalysisResult> => {
-    // Имитация анализа с прогрессом
     for (let i = 0; i <= 100; i += 10) {
       setProgress(i);
       await new Promise(resolve => setTimeout(resolve, 200));
     }
 
-    // Генерируем случайный результат анализа
     const riskScores = [15, 25, 45, 75, 85, 95];
     const riskScore = riskScores[Math.floor(Math.random() * riskScores.length)];
     
@@ -87,7 +85,6 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
       processingTime: 2000 + Math.random() * 1000
     };
 
-    // Сохраняем результат в localStorage
     const history = JSON.parse(localStorage.getItem(`fraudAnalysis_${userId}`) || '[]');
     history.unshift(result);
     localStorage.setItem(`fraudAnalysis_${userId}`, JSON.stringify(history.slice(0, 50))); // Храним последние 50

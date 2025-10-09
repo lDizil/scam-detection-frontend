@@ -1,7 +1,8 @@
 ﻿import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Shield, Brain, CheckCircle, Lock } from 'lucide-react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from './common/ImageWithFallback';
+import { Link } from 'react-router-dom';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -14,15 +15,16 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity cursor-pointer">
             <Shield className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl">FraudGuard AI</span>
-          </div>
+            <span className="text-2xl font-bold">FraudGuard AI</span>
+          </Link>
           <Button onClick={onGetStarted} variant="outline">
             Войти
           </Button>
         </div>
       </header>
+
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
