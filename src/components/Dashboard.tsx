@@ -2,7 +2,7 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle, Home } from 'lucide-react';
+import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle } from 'lucide-react';
 import { ContentAnalyzer } from './ContentAnalyzer';
 import { AnalysisHistory } from './AnalysisHistory';
 import { StatsOverview } from './StatsOverview';
@@ -34,9 +34,9 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
 
           
           <div className="flex items-center space-x-4">
-            <div className="text-sm">
+            <div className="text-base">
               <p className="text-gray-600">Добро пожаловать,</p>
-              <p>{user.name}</p>
+              <p className="font-semibold">{user.name}</p>
             </div>
             <Button variant="outline" onClick={onLogout}>
               <LogOut className="h-4 w-4 mr-2" />
@@ -50,8 +50,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl mb-2">Панель управления</h1>
-          <p className="text-gray-600">
+          <h1 className="text-4xl font-bold mb-3">Панель управления</h1>
+          <p className="text-gray-600 text-lg">
             Анализируйте контент на предмет мошенничества с помощью нашей ИИ-системы
           </p>
         </div>

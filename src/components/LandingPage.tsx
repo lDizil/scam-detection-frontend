@@ -46,7 +46,7 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
          <Button 
             onClick={onGetStarted} 
             size="lg"
-            className="px-8 py-3 text-lg bg-blue-600 hover:bg-blue-700"
+            className="px-8 py-3 text-lg bg-blue-500 hover:bg-blue-600 text-white"
           >
             {isLoggedIn ? 'В панель управления' : 'Начать защищаться'}
           </Button>

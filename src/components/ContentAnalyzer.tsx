@@ -148,7 +148,7 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
     <div className="space-y-6">
       {/* Content Type Selection */}
       <div>
-        <Label className="text-base mb-4 block">Тип контента для анализа</Label>
+        <Label className="text-lg mb-4 block font-semibold">Тип контента для анализа</Label>
         <div className="grid grid-cols-4 gap-3">
           {contentTypes.map(({ type, label, icon: Icon }) => (
             <Button
@@ -160,10 +160,14 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
                 setFile(null);
                 setResult(null);
               }}
-              className="h-auto py-3 flex-col space-y-2"
+              className={`h-auto py-4 flex-col space-y-2 transition-all ${
+                activeType === type 
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500' 
+                  : 'bg-white hover:bg-blue-50 border-2 hover:border-blue-300'
+              }`}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-sm">{label}</span>
+              <Icon className="h-6 w-6" />
+              <span className="text-sm font-medium">{label}</span>
             </Button>
           ))}
         </div>
@@ -172,8 +176,8 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
       {/* Content Input */}
       <div className="space-y-4">
         {activeType === 'text' && (
-          <div>
-            <Label htmlFor="text-content">Текст для анализа</Label>
+          <div className="space-y-2">
+            <Label htmlFor="text-content" className="text-base">Текст для анализа</Label>
             <Textarea
               id="text-content"
               placeholder="Вставьте текст, который нужно проверить на мошенничество..."
@@ -185,8 +189,8 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
         )}
 
         {activeType === 'url' && (
-          <div>
-            <Label htmlFor="url-content">URL адрес</Label>
+          <div className="space-y-2">
+            <Label htmlFor="url-content" className="text-base">URL адрес</Label>
             <Input
               id="url-content"
               type="url"
@@ -198,8 +202,8 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
         )}
 
         {(activeType === 'image' || activeType === 'video') && (
-          <div>
-            <Label htmlFor="file-upload">
+          <div className="space-y-2">
+            <Label htmlFor="file-upload" className="text-base">
               Загрузить {activeType === 'image' ? 'изображение' : 'видео'}
             </Label>
             <Input
@@ -222,7 +226,7 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
       <Button 
         onClick={handleAnalyze} 
         disabled={isAnalyzing || (!content.trim() && !file)}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
+        className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-300 disabled:text-gray-500"
         size="lg"
       >
         {isAnalyzing ? (
