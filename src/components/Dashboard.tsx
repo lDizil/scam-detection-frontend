@@ -10,8 +10,8 @@ import { Link } from 'react-router-dom';
 
 interface User {
   id: string;
-  email: string;
-  name: string;
+  email?: string;
+  username: string;
 }
 
 interface DashboardProps {
@@ -34,11 +34,12 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
 
           
           <div className="flex items-center space-x-4">
-            <div className="text-base">
-              <p className="text-gray-600">Добро пожаловать,</p>
-              <p className="font-semibold">{user.name}</p>
+            <div className="text-lg">
+              <p className="text-gray-600">
+                Добро пожаловать, <span className="font-semibold text-gray-900">{user.username || user.email || 'Пользователь'}</span>
+              </p>
             </div>
-            <Button variant="outline" onClick={onLogout}>
+            <Button variant="outline" onClick={onLogout} className="text-base px-5 py-2 h-auto">
               <LogOut className="h-4 w-4 mr-2" />
               Выйти
             </Button>

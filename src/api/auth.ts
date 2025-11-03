@@ -1,47 +1,71 @@
 ﻿import { apiClient } from './client';
 
 export interface LoginRequest {
-  login: string;
+  username: string;
   password: string;
 }
 
 export interface RegisterRequest {
   username: string;
-  email: string;
+  email?: string;
   password: string;
 }
 
-export interface AuthResponse {
-  access_token: string;
-  refresh_token: string;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-  };
+export interface User {
+  id: string;
+  username: string;
+  email?: string;
+}
+
+export interface ProfileUpdateRequest {
+  username?: string;
+  email?: string;
 }
 
 export const authApi = {
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post('/auth/login', data);
-    return response.data;
+  register: async (data: RegisterRequest): Promise<User> => {
+    const response = await apiClient.post('/auth/register', data);
+    // Бэкенд возвращает { user: {...}, access_token, refresh_token }
+    return response.data.user || response.data;
   },
 
-  register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post('/auth/register', data);
-    return response.data;
+  login: async (data: LoginRequest): Promise<User> => {
+    const response = await apiClient.post('/auth/login', data);
+    // Бэкенд возвращает { user: {...}, access_token, refresh_token }
+    return response.data.user || response.data;
   },
 
   logout: async (): Promise<void> => {
-    const refreshToken = localStorage.getItem('refresh_token');
-    await apiClient.post('/auth/logout', { refresh_token: refreshToken });
+    await apiClient.post('/auth/logout');
+    localStorage.removeItem('user');
   },
 
-  refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
-    const response = await apiClient.post('/auth/refresh', {
-      refresh_token: refreshToken,
-    });
+  refresh: async (): Promise<void> => {
+    await apiClient.post('/auth/refresh');
+  },
+
+  getProfile: async (): Promise<User> => {
+    const response = await apiClient.get('/profile');
     return response.data;
+  },
+
+  updateProfile: async (data: ProfileUpdateRequest): Promise<User> => {
+    const response = await apiClient.put('/profile', data);
+    return response.data;
+  },
+
+  deleteAccount: async (): Promise<void> => {
+    await apiClient.delete('/account');
+    localStorage.removeItem('user');
+  },
+
+  checkAuth: async (): Promise<User | null> => {
+    try {
+      const response = await apiClient.get('/profile');
+      return response.data;
+    } catch (error) {
+      return null;
+    }
   },
 };
 

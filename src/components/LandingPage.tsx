@@ -19,9 +19,15 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
             <Shield className="h-8 w-8 text-blue-600" />
             <span className="text-2xl font-bold">FraudGuard AI</span>
           </Link>
-          <Button onClick={onGetStarted} variant="outline">
-            Войти
-          </Button>
+          {isLoggedIn ? (
+            <Button onClick={onGetStarted} variant="outline" className="text-base px-6 py-2 h-auto">
+              Панель управления
+            </Button>
+          ) : (
+            <Button onClick={onGetStarted} variant="outline" className="text-base px-6 py-2 h-auto">
+              Войти
+            </Button>
+          )}
         </div>
       </header>
 
@@ -133,11 +139,13 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
       <section className="py-20 bg-blue-600 text-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl mb-6">
-            Готовы защитить себя от мошенников?
+            {isLoggedIn ? 'Продолжайте защищать себя от мошенников' : 'Готовы защитить себя от мошенников?'}
           </h2>
           <p className="text-xl mb-8 opacity-90">
-            Присоединяйтесь к тысячам пользователей, которые уже используют 
-            FraudGuard AI для защиты от мошеннического контента
+            {isLoggedIn 
+              ? 'Используйте нашу панель управления для анализа контента и просмотра истории проверок'
+              : 'Присоединяйтесь к тысячам пользователей, которые уже используют FraudGuard AI для защиты от мошеннического контента'
+            }
           </p>
           <Button 
             onClick={onGetStarted}
@@ -145,7 +153,7 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
             variant="secondary"
             className="px-8 py-3 text-lg"
           >
-            Зарегистрироваться бесплатно
+            {isLoggedIn ? 'Перейти в панель управления' : 'Зарегистрироваться бесплатно'}
           </Button>
         </div>
       </section>

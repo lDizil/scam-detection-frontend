@@ -5,16 +5,17 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Shield, ArrowLeft, Mail, Lock, User, AlertTriangle } from 'lucide-react';
+import { authApi } from '../api/auth';
 
 interface AuthPageProps {
-  onLogin: (user: { id: string; email: string; name: string }) => void;
+  onLogin: (user: { id: string; email?: string; username: string }) => void;
   onBackToLanding: () => void;
 }
 
 export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [registerData, setRegisterData] = useState({ 
-    name: '', 
+    username: '', 
     email: '', 
     password: '', 
     confirmPassword: '' 
@@ -27,46 +28,63 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
     e.preventDefault();
     setLoginError('');
     
-    if (!loginData.email || !loginData.password) {
+    if (!loginData.username || !loginData.password) {
       setLoginError('Заполните все поля');
       return;
     }
 
-    // Валидация email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(loginData.email)) {
-      setLoginError('Введите корректный email адрес');
+    if (loginData.password.length < 6) {
+      setLoginError('Пароль должен содержать минимум 6 символов');
       return;
     }
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem('fraudDetectionUsers') || '[]');
-      const user = users.find((u: any) => u.email === loginData.email && u.password === loginData.password);
+    try {
+      const user = await authApi.login({
+        username: loginData.username,
+        password: loginData.password,
+      });
       
-      if (user) {
-        onLogin({ id: user.id, email: user.email, name: user.name });
-      } else {
-        setLoginError('Неверный email или пароль');
+      onLogin(user);
+    } catch (error: any) {
+      let errorMessage = 'Неверные данные для входа';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
       }
+      
+      setLoginError(errorMessage);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError('');
     
-    if (!registerData.name || !registerData.email || !registerData.password || !registerData.confirmPassword) {
-      setRegisterError('Заполните все поля');
+    if (!registerData.username || !registerData.password || !registerData.confirmPassword) {
+      setRegisterError('Заполните все обязательные поля');
+      return;
+    }
+    if (registerData.username.length < 3) {
+      setRegisterError('Имя пользователя должно содержать минимум 3 символа');
       return;
     }
 
-    // Валидация email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(registerData.email)) {
-      setRegisterError('Введите корректный email адрес');
+    if (registerData.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(registerData.email)) {
+        setRegisterError('Введите корректный email адрес');
+        return;
+      }
+    }
+
+    if (registerData.password.length < 6) {
+      setRegisterError('Пароль должен содержать минимум 6 символов');
       return;
     }
 
@@ -75,36 +93,29 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
       return;
     }
 
-    if (registerData.password.length < 6) {
-      setRegisterError('Пароль должен содержать минимум 6 символов');
-      return;
-    }
-
     setIsLoading(true);
 
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem('fraudDetectionUsers') || '[]');
-
-      if (users.find((u: any) => u.email === registerData.email)) {
-        setRegisterError('Пользователь с таким email уже существует');
-        setIsLoading(false);
-        return;
-      }
-
-      const newUser = {
-        id: Date.now().toString(),
-        name: registerData.name,
-        email: registerData.email,
+    try {
+      const user = await authApi.register({
+        username: registerData.username,
+        email: registerData.email || undefined,
         password: registerData.password,
-        createdAt: new Date().toISOString()
-      };
+      });
 
-      users.push(newUser);
-      localStorage.setItem('fraudDetectionUsers', JSON.stringify(users));
-
-      onLogin({ id: newUser.id, email: newUser.email, name: newUser.name });
+      onLogin(user);
+    } catch (error: any) {
+      let errorMessage = 'Ошибка при регистрации';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setRegisterError(errorMessage);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -151,17 +162,17 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
               <TabsContent value="login" className="space-y-5">
                 <form onSubmit={handleLogin} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email" className="text-sm font-medium text-gray-700">Email</Label>
+                    <Label htmlFor="login-username" className="text-sm font-medium text-gray-700">Имя пользователя или Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
+                      <User className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
-                        id="login-email"
+                        id="login-username"
                         type="text"
-                        placeholder="your@email.com"
+                        placeholder="username или email"
                         className="pl-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                        value={loginData.email}
+                        value={loginData.username}
                         onChange={(e) => {
-                          setLoginData({ ...loginData, email: e.target.value });
+                          setLoginData({ ...loginData, username: e.target.value });
                           setLoginError('');
                         }}
                       />
@@ -207,17 +218,17 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
               <TabsContent value="register" className="space-y-5">
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="register-name" className="text-sm font-medium text-gray-700">Имя</Label>
+                    <Label htmlFor="register-username" className="text-sm font-medium text-gray-700">Имя пользователя *</Label>
                     <div className="relative">
                       <User className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
-                        id="register-name"
+                        id="register-username"
                         type="text"
-                        placeholder="Ваше имя"
+                        placeholder="username"
                         className="pl-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                        value={registerData.name}
+                        value={registerData.username}
                         onChange={(e) => {
-                          setRegisterData({ ...registerData, name: e.target.value });
+                          setRegisterData({ ...registerData, username: e.target.value });
                           setRegisterError('');
                         }}
                       />
@@ -225,7 +236,7 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="register-email" className="text-sm font-medium text-gray-700">Email</Label>
+                    <Label htmlFor="register-email" className="text-sm font-medium text-gray-700">Email (необязательно)</Label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
@@ -243,7 +254,7 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="register-password" className="text-sm font-medium text-gray-700">Пароль</Label>
+                    <Label htmlFor="register-password" className="text-sm font-medium text-gray-700">Пароль *</Label>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
@@ -261,7 +272,7 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="register-confirm" className="text-sm font-medium text-gray-700">Подтвердите пароль</Label>
+                    <Label htmlFor="register-confirm" className="text-sm font-medium text-gray-700">Подтвердите пароль *</Label>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
