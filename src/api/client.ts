@@ -31,12 +31,27 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/login') &&
-      !originalRequest.url?.includes('/auth/register') &&
-      !originalRequest.url?.includes('/auth/refresh')
+      originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register')
     ) {
+      return Promise.reject(error);
+    }
+
+    if (window.location.pathname === '/auth' || window.location.pathname === '/') {
+      return Promise.reject(error);
+    }
+
+    if (originalRequest.url?.includes('/auth/refresh')) {
+      processQueue(error, null);
+      isRefreshing = false;
+      
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth';
+      }
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -63,17 +78,17 @@ apiClient.interceptors.response.use(
         isRefreshing = false;
 
         return apiClient(originalRequest);
+        
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-
-        localStorage.removeItem('user');
-        window.location.href = '/auth';
+        
+        if (!window.location.pathname.includes('/auth')) {
+          window.location.href = '/auth';
+        }
         return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
-  }
-);
-
+  });

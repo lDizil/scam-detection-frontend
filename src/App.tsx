@@ -21,7 +21,6 @@ function App() {
         const userData = await authApi.checkAuth();
         if (userData) {
           setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -35,7 +34,6 @@ function App() {
 
   const handleLogin = (userData: User) => {
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const handleLogout = async () => {
@@ -45,7 +43,6 @@ function App() {
       console.error('Logout failed:', error);
     } finally {
       setUser(null);
-      localStorage.removeItem('user');
     }
   };
 
@@ -60,14 +57,11 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Лендинг - главная страница */}
         <Route 
           path="/" 
-          element={<LandingPageWrapper />}
+          element={<LandingPageWrapper user={user} />}
         />
-
         
-        {/* Страница авторизации */}
         <Route 
           path="/auth" 
           element={
@@ -79,7 +73,6 @@ function App() {
           } 
         />
         
-        {/* Дашборд (защищенный маршрут) */}
         <Route 
           path="/dashboard" 
           element={
@@ -95,11 +88,9 @@ function App() {
   );
 }
 
-// Обёртка для LandingPage с навигацией
-function LandingPageWrapper() {
+function LandingPageWrapper({ user }: { user: User | null }) {
   const navigate = useNavigate();
-  const savedUser = localStorage.getItem('user');
-  const isLoggedIn = !!savedUser;
+  const isLoggedIn = !!user;
   
   return (
     <LandingPage 
@@ -109,8 +100,6 @@ function LandingPageWrapper() {
   );
 }
 
-
-// Обёртка для AuthPage с навигацией
 function AuthPageWrapper({ onLogin }: { onLogin: (user: User) => void }) {
   const navigate = useNavigate();
   
