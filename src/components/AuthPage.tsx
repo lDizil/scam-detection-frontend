@@ -4,7 +4,7 @@ import { Card, CardContent } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Shield, ArrowLeft, Mail, Lock, User, AlertTriangle } from 'lucide-react';
+import { Shield, ArrowLeft, Mail, Lock, User, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { authApi } from '../api/auth';
 
 interface AuthPageProps {
@@ -23,6 +23,9 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +57,11 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.request) {
+        // Запрос был отправлен, но ответа не получено (сервер недоступен)
+        errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
+      } else if (error.message) {
+        errorMessage = `Ошибка: ${error.message}`;
       }
       
       setLoginError(errorMessage);
@@ -110,6 +118,11 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.request) {
+        // Запрос был отправлен, но ответа не получено (сервер недоступен)
+        errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
+      } else if (error.message) {
+        errorMessage = `Ошибка: ${error.message}`;
       }
       
       setRegisterError(errorMessage);
@@ -185,15 +198,26 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
                       <Lock className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
                         id="login-password"
-                        type="password"
+                        type={showLoginPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className="pl-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="pl-11 pr-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         value={loginData.password}
                         onChange={(e) => {
                           setLoginData({ ...loginData, password: e.target.value });
                           setLoginError('');
                         }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        {showLoginPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
                     {loginError && (
                       <p className="text-red-600 text-sm flex items-center mt-1">
@@ -259,15 +283,26 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
                       <Lock className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
                         id="register-password"
-                        type="password"
+                        type={showRegisterPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className="pl-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="pl-11 pr-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         value={registerData.password}
                         onChange={(e) => {
                           setRegisterData({ ...registerData, password: e.target.value });
                           setRegisterError('');
                         }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                        className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        {showRegisterPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
                   </div>
 
@@ -277,15 +312,26 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
                       <Lock className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                       <Input
                         id="register-confirm"
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className="pl-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="pl-11 pr-11 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         value={registerData.confirmPassword}
                         onChange={(e) => {
                           setRegisterData({ ...registerData, confirmPassword: e.target.value });
                           setRegisterError('');
                         }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
                     {registerError && (
                       <p className="text-red-600 text-sm flex items-center mt-1">

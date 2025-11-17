@@ -150,8 +150,7 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
           <Button 
             onClick={onGetStarted}
             size="lg"
-            variant="secondary"
-            className="px-8 py-3 text-lg"
+            className="px-8 py-3 text-lg bg-white text-blue-600 hover:bg-gray-100 font-semibold shadow-lg"
           >
             {isLoggedIn ? 'Перейти в панель управления' : 'Зарегистрироваться бесплатно'}
           </Button>

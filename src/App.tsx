@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
+import { Profile } from './components/Profile';
 import { authApi } from './api/auth';
 
 interface User {
@@ -85,6 +86,18 @@ function App() {
           element={
             user ? (
               <Dashboard user={user} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          } 
+        />
+
+        {/* Профиль (защищенный маршрут) */}
+        <Route 
+          path="/profile" 
+          element={
+            user ? (
+              <Profile user={user} onUpdate={handleLogin} onLogout={handleLogout} />
             ) : (
               <Navigate to="/auth" replace />
             )
