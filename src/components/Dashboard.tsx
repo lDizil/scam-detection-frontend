@@ -2,7 +2,7 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle } from 'lucide-react';
+import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle, User as UserIcon } from 'lucide-react';
 import { ContentAnalyzer } from './ContentAnalyzer';
 import { AnalysisHistory } from './AnalysisHistory';
 import { StatsOverview } from './StatsOverview';
@@ -37,14 +37,19 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
           <div className="flex items-center space-x-4">
             <div className="text-lg">
               <p className="text-gray-600">
-                Добро пожаловать, <button 
-                  onClick={() => navigate('/profile')}
-                  className="font-semibold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer underline decoration-dotted underline-offset-2"
-                >
+                Добро пожаловать, <span className="font-semibold text-gray-900">
                   {user.username || user.email || 'Пользователь'}
-                </button>
+                </span>
               </p>
             </div>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/profile')} 
+              className="text-base px-5 py-2 h-auto"
+            >
+              <UserIcon className="h-4 w-4 mr-2" />
+              Профиль
+            </Button>
             <Button variant="outline" onClick={onLogout} className="text-base px-5 py-2 h-auto">
               <LogOut className="h-4 w-4 mr-2" />
               Выйти

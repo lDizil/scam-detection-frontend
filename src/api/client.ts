@@ -63,13 +63,28 @@ apiClient.interceptors.response.use(
         isRefreshing = false;
 
         return apiClient(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError, null);
         isRefreshing = false;
+        failedQueue = [];
 
         localStorage.removeItem('user');
-        window.location.href = '/auth';
+
+        if (!window.location.pathname.includes('/auth') && 
+            window.location.pathname !== '/') {
+          window.location.href = '/auth';
+        }
+        
         return Promise.reject(refreshError);
+      }
+    }
+
+    if (error.response?.status === 401 && originalRequest.url?.includes('/auth/refresh')) {
+      localStorage.removeItem('user');
+      
+      if (!window.location.pathname.includes('/auth') && 
+          window.location.pathname !== '/') {
+        window.location.href = '/auth';
       }
     }
 

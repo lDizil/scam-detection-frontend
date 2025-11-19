@@ -114,10 +114,21 @@ function LandingPageWrapper() {
   const savedUser = localStorage.getItem('user');
   const isLoggedIn = !!savedUser;
   
+  let username: string | undefined;
+  if (savedUser) {
+    try {
+      const userData = JSON.parse(savedUser);
+      username = userData.username || userData.email;
+    } catch (error) {
+      console.error('Failed to parse user data:', error);
+    }
+  }
+  
   return (
     <LandingPage 
       onGetStarted={() => navigate(isLoggedIn ? '/dashboard' : '/auth')}
       isLoggedIn={isLoggedIn}
+      username={username}
     />
   );
 }

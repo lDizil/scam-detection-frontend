@@ -58,6 +58,15 @@ export function Profile({ user, onUpdate, onLogout }: ProfileProps) {
       }
     }
 
+    const hasChanges = 
+      formData.username !== user.username || 
+      formData.email !== (user.email || '');
+
+    if (!hasChanges) {
+      setError('Нет изменений для сохранения');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -129,19 +138,19 @@ export function Profile({ user, onUpdate, onLogout }: ProfileProps) {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/dashboard')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Назад
-            </Button>
             <div className="flex items-center space-x-2">
               <Shield className="h-7 w-7 text-blue-600" />
               <span className="text-xl font-bold">Профиль</span>
             </div>
           </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/dashboard')}
+            className="text-base px-5 py-2 h-auto"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Назад
+          </Button>
         </div>
       </header>
 
