@@ -58,7 +58,6 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.request) {
-        // Запрос был отправлен, но ответа не получено (сервер недоступен)
         errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
       } else if (error.message) {
         errorMessage = `Ошибка: ${error.message}`;
@@ -119,7 +118,6 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.request) {
-        // Запрос был отправлен, но ответа не получено (сервер недоступен)
         errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
       } else if (error.message) {
         errorMessage = `Ошибка: ${error.message}`;

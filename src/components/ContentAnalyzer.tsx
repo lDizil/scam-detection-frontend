@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Textarea } from './ui/textarea';
@@ -6,31 +6,30 @@ import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
-import { FileText, Image, Video, AlertTriangle, CheckCircle, Clock, Upload } from 'lucide-react';
+import { FileText, Image, Video, Upload, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { toast } from "sonner";
+import { contentApi, type TextAnalysisResponse } from '../api/content';
 
 interface ContentAnalyzerProps {
   userId: string;
 }
 
 interface AnalysisResult {
-  id: string;
-  type: 'text' | 'image' | 'video' | 'url';
+  checkId: number;
   content: string;
-  riskScore: number;
-  status: 'safe' | 'suspicious' | 'dangerous';
-  details: string[];
+  confidence: number;
+  isScam: boolean;
+  label: string;
   timestamp: string;
   processingTime: number;
 }
 
-export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
+export function ContentAnalyzer({ }: ContentAnalyzerProps) {
   const [activeType, setActiveType] = useState<'text' | 'image' | 'video' | 'url'>('text');
   const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [progress, setProgress] = useState(0);
 
   const contentTypes = [
     { type: 'text' as const, label: 'Текст', icon: FileText },
@@ -39,86 +38,95 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
     { type: 'url' as const, label: 'URL', icon: Upload },
   ];
 
-  const mockAnalyze = async (): Promise<AnalysisResult> => {
-    for (let i = 0; i <= 100; i += 10) {
-      setProgress(i);
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-
-    const riskScores = [15, 25, 45, 75, 85, 95];
-    const riskScore = riskScores[Math.floor(Math.random() * riskScores.length)];
-    
-    let status: 'safe' | 'suspicious' | 'dangerous';
-    let details: string[] = [];
-
-    if (riskScore < 30) {
-      status = 'safe';
-      details = [
-        'Контент не содержит признаков мошенничества',
-        'Отсутствуют подозрительные ключевые слова',
-        'Нормальные лингвистические паттерны'
-      ];
-    } else if (riskScore < 70) {
-      status = 'suspicious';
-      details = [
-        'Обнаружены потенциально подозрительные элементы',
-        'Рекомендуется дополнительная проверка',
-        'Возможные признаки социальной инженерии'
-      ];
-    } else {
-      status = 'dangerous';
-      details = [
-        'Высокая вероятность мошеннического контента',
-        'Обнаружены типичные паттерны обмана',
-        'Содержит призывы к финансовым операциям'
-      ];
-    }
-
-    const result: AnalysisResult = {
-      id: Date.now().toString(),
-      type: activeType,
-      content: activeType === 'text' ? content : (file?.name || content),
-      riskScore,
-      status,
-      details,
-      timestamp: new Date().toISOString(),
-      processingTime: 2000 + Math.random() * 1000
-    };
-
-    const history = JSON.parse(localStorage.getItem(`fraudAnalysis_${userId}`) || '[]');
-    history.unshift(result);
-    localStorage.setItem(`fraudAnalysis_${userId}`, JSON.stringify(history.slice(0, 50))); // Храним последние 50
-
-    return result;
-  };
-
   const handleAnalyze = async () => {
-    if (!content.trim() && !file) {
-      toast.error('Введите контент для анализа');
+    if (!content.trim()) {
+      toast.error('Введите текст для анализа');
       return;
     }
 
     setIsAnalyzing(true);
     setResult(null);
-    setProgress(0);
 
     try {
-      const analysisResult = await mockAnalyze();
-      setResult(analysisResult);
-      
-      const statusMessages = {
-        safe: 'Контент безопасен',
-        suspicious: 'Контент подозрителен',
-        dangerous: 'Контент опасен!'
-      };
+      const response: TextAnalysisResponse = await contentApi.analyzeText(content);
 
-      toast.success(statusMessages[analysisResult.status]);
-    } catch (error) {
-      toast.error('Ошибка при анализе контента');
+      if (response.success) {
+        const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
+        
+        const analysisResult: AnalysisResult = {
+          checkId: response.check_id,
+          content: content,
+          confidence: response.prediction.confidence,
+          isScam: isScamContent,
+          label: response.prediction.label,
+          timestamp: new Date().toISOString(),
+          processingTime: response.processing_time
+        };
+
+        setResult(analysisResult);
+        
+        if (isScamContent) {
+          toast.error('Обнаружен мошеннический контент!');
+        } else {
+          toast.success('Контент безопасен');
+        }
+      }
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      
+      if (error.response?.status === 401) {
+        toast.error('Необходима авторизация');
+      } else if (error.request) {
+        toast.error('Не удалось подключиться к серверу');
+      } else {
+        toast.error(error.response?.data?.error || 'Ошибка при анализе контента');
+      }
     } finally {
       setIsAnalyzing(false);
-      setProgress(0);
     }
+  };
+
+  const getRiskScore = (confidence: number) => {
+    return Math.round(confidence * 100);
+  };
+
+  const getDangerLevel = (isScam: boolean, confidence: number) => {
+    const score = confidence * 100;
+    
+    if (isScam) {
+      if (score >= 90) return { level: 'critical', text: 'Критическая неудача', color: 'bg-red-600 text-white border-2 border-red-700 font-bold shadow-md' };
+      if (score >= 70) return { level: 'high', text: 'Высокая опасность', color: 'bg-red-500 text-white' };
+      if (score >= 50) return { level: 'medium', text: 'Средняя опасность', color: 'bg-orange-500 text-white' };
+      return { level: 'low', text: 'Низкая опасность', color: 'bg-yellow-500 text-white' };
+    } else {
+      if (score >= 99) return { level: 'perfect', text: 'Критическая удача', color: 'bg-green-600 text-white border-2 border-green-700 font-bold shadow-md' };
+      if (score >= 90) return { level: 'safe', text: 'Безопасно', color: 'bg-green-600 text-white' };
+      if (score >= 70) return { level: 'likely-safe', text: 'Вероятно безопасно', color: 'bg-green-500 text-white' };
+      return { level: 'uncertain', text: 'Требует проверки', color: 'bg-yellow-500 text-white' };
+    }
+  };
+
+  const getRiskColor = (label: string, confidence: number) => {
+    const score = confidence * 100;
+    if (label === 'legitimate') {
+      if (score >= 90) return 'text-green-600 bg-green-50 border-green-200';
+      if (score >= 70) return 'text-green-600 bg-green-50 border-green-200';
+      return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    }
+    if (score >= 90) return 'text-red-600 bg-red-50 border-red-200';
+    if (score >= 70) return 'text-red-600 bg-red-50 border-red-200';
+    return 'text-orange-600 bg-orange-50 border-orange-200';
+  };
+
+  const getStatusBadge = (label: string) => {
+    if (label === 'legitimate') return 'bg-green-100 text-green-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  const getStatusText = (label: string) => {
+    if (label === 'legitimate') return 'Легитимный контент';
+    if (label === 'phishing') return 'Фишинг';
+    return label;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,24 +137,8 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
     }
   };
 
-  const getRiskColor = (score: number) => {
-    if (score < 30) return 'text-green-600 bg-green-50 border-green-200';
-    if (score < 70) return 'text-orange-600 bg-orange-50 border-orange-200';
-    return 'text-red-600 bg-red-50 border-red-200';
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      safe: 'bg-green-100 text-green-800',
-      suspicious: 'bg-orange-100 text-orange-800',
-      dangerous: 'bg-red-100 text-red-800'
-    };
-    return variants[status as keyof typeof variants] || variants.safe;
-  };
-
   return (
     <div className="space-y-6">
-      {/* Content Type Selection */}
       <div>
         <Label className="text-lg mb-4 block font-semibold">Тип контента для анализа</Label>
         <div className="grid grid-cols-4 gap-3">
@@ -173,7 +165,6 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
         </div>
       </div>
 
-      {/* Content Input */}
       <div className="space-y-4">
         {activeType === 'text' && (
           <div className="space-y-2">
@@ -222,10 +213,9 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
         )}
       </div>
 
-      {/* Analyze Button */}
       <Button 
         onClick={handleAnalyze} 
-        disabled={isAnalyzing || (!content.trim() && !file)}
+        disabled={isAnalyzing || !content.trim()}
         className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-300 disabled:text-gray-500"
         size="lg"
       >
@@ -242,56 +232,66 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
         )}
       </Button>
 
-      {/* Progress */}
-      {isAnalyzing && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Прогресс анализа</span>
-            <span>{progress}%</span>
-          </div>
-          <Progress value={progress} className="w-full" />
-        </div>
-      )}
-
-      {/* Results */}
       {result && (
-        <Card className={`border-2 ${getRiskColor(result.riskScore)}`}>
+        <Card className={`border-2 ${getRiskColor(result.label, result.confidence)}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Результат анализа</span>
-              <Badge className={getStatusBadge(result.status)}>
-                {result.status === 'safe' && <CheckCircle className="h-3 w-3 mr-1" />}
-                {result.status === 'suspicious' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                {result.status === 'dangerous' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                {result.status === 'safe' ? 'Безопасно' : 
-                 result.status === 'suspicious' ? 'Подозрительно' : 'Опасно'}
+              <span className="text-xl">Результат анализа</span>
+              <Badge className={getStatusBadge(result.label)} style={{ fontSize: '0.875rem', padding: '0.5rem 0.75rem' }}>
+                {result.label === 'legitimate' && <CheckCircle className="h-4 w-4 mr-1.5" />}
+                {result.label === 'phishing' && <AlertTriangle className="h-4 w-4 mr-1.5" />}
+                {getStatusText(result.label)}
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span>Оценка риска</span>
-                <span className="font-medium">{result.riskScore}/100</span>
+          <CardContent className="space-y-5">
+            <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-semibold text-gray-700">Оценка угрозы</span>
+                <Badge className={`${getDangerLevel(result.isScam, result.confidence).color} text-base px-4 py-2`}>
+                  {getDangerLevel(result.isScam, result.confidence).text}
+                </Badge>
               </div>
-              <Progress value={result.riskScore} className="h-2" />
             </div>
 
             <div>
-              <Label className="text-base mb-2 block">Детали анализа:</Label>
-              <ul className="space-y-1">
-                {result.details.map((detail, index) => (
-                  <li key={index} className="text-sm text-gray-600 flex items-start">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                    {detail}
-                  </li>
-                ))}
-              </ul>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-base font-semibold text-gray-700">Уверенность модели</span>
+                <span className="text-2xl font-bold text-gray-900">{getRiskScore(result.confidence)}%</span>
+              </div>
+              <Progress value={getRiskScore(result.confidence)} className="h-3" />
+              
+              {getRiskScore(result.confidence) < 70 && (
+                <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-yellow-800">
+                    <strong>Внимание:</strong> Модель не полностью уверена в результате. 
+                    Рекомендуется дополнительная проверка и осторожность при принятии решений.
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="pt-4 border-t text-sm text-gray-500">
-              <p>Время обработки: {(result.processingTime / 1000).toFixed(1)}с</p>
-              <p>Анализ завершен: {new Date(result.timestamp).toLocaleString('ru-RU')}</p>
+            <div>
+              <Label className="text-base mb-2 block font-semibold text-gray-700">Проверенный текст:</Label>
+              <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg max-h-40 overflow-y-auto border border-gray-200">
+                {result.content}
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200 space-y-2 text-sm text-gray-600">
+              <div className="flex items-center justify-between">
+                <span>Время обработки:</span>
+                <span className="font-medium text-gray-900">{result.processingTime.toFixed(3)}с</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>ID проверки:</span>
+                <span className="font-medium text-gray-900">#{result.checkId}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Проверено:</span>
+                <span className="font-medium text-gray-900">{new Date(result.timestamp).toLocaleString('ru-RU')}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -299,4 +299,3 @@ export function ContentAnalyzer({ userId }: ContentAnalyzerProps) {
     </div>
   );
 }
-
