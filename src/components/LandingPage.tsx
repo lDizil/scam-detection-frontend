@@ -1,15 +1,18 @@
 ﻿import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Shield, Brain, CheckCircle, Lock } from 'lucide-react';
+import { Shield, Brain, CheckCircle, Lock, User as UserIcon } from 'lucide-react';
 import { ImageWithFallback } from './common/ImageWithFallback';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface LandingPageProps {
   onGetStarted: () => void;
   isLoggedIn?: boolean;
+  username?: string;
 }
 
-export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
+export function LandingPage({ onGetStarted, isLoggedIn, username }: LandingPageProps) {
+  const navigate = useNavigate();
+  
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -20,12 +23,31 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
             <span className="text-2xl font-bold">FraudGuard AI</span>
           </Link>
           {isLoggedIn ? (
-            <Button onClick={onGetStarted} variant="outline" className="text-base px-6 py-2 h-auto">
-              Панель управления
-            </Button>
+            <div className="flex items-center gap-4">
+              {username && (
+                <span className="text-gray-600 text-base">
+                  Добро пожаловать, <span className="font-semibold text-gray-900">{username}</span>
+                </span>
+              )}
+              <Button 
+                onClick={() => navigate('/profile')} 
+                variant="outline" 
+                className="text-base px-5 py-2 h-auto"
+              >
+                <UserIcon className="h-4 w-4 mr-2" />
+                Профиль
+              </Button>
+              <Button 
+                onClick={onGetStarted} 
+                variant="outline" 
+                className="text-base px-5 py-2 h-auto"
+              >
+                Панель управления
+              </Button>
+            </div>
           ) : (
             <Button onClick={onGetStarted} variant="outline" className="text-base px-6 py-2 h-auto">
-              Войти
+              Вход / Регистрация
             </Button>
           )}
         </div>
@@ -150,8 +172,7 @@ export function LandingPage({ onGetStarted, isLoggedIn }: LandingPageProps) {
           <Button 
             onClick={onGetStarted}
             size="lg"
-            variant="secondary"
-            className="px-8 py-3 text-lg"
+            className="px-8 py-3 text-lg bg-white text-blue-600 hover:bg-gray-100 font-semibold shadow-lg"
           >
             {isLoggedIn ? 'Перейти в панель управления' : 'Зарегистрироваться бесплатно'}
           </Button>

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
+import { Profile } from './components/Profile';
 import { authApi } from './api/auth';
 
 interface User {
@@ -83,6 +84,18 @@ function App() {
             )
           } 
         />
+
+        {/* Профиль (защищенный маршрут) */}
+        <Route 
+          path="/profile" 
+          element={
+            user ? (
+              <Profile user={user} onUpdate={handleLogin} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          } 
+        />
       </Routes>
     </BrowserRouter>
   );
@@ -92,10 +105,21 @@ function LandingPageWrapper({ user }: { user: User | null }) {
   const navigate = useNavigate();
   const isLoggedIn = !!user;
   
+  let username: string | undefined;
+  if (savedUser) {
+    try {
+      const userData = JSON.parse(savedUser);
+      username = userData.username || userData.email;
+    } catch (error) {
+      console.error('Failed to parse user data:', error);
+    }
+  }
+  
   return (
     <LandingPage 
       onGetStarted={() => navigate(isLoggedIn ? '/dashboard' : '/auth')}
       isLoggedIn={isLoggedIn}
+      username={username}
     />
   );
 }
