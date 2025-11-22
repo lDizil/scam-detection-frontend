@@ -103,6 +103,7 @@ function App() {
 
 function LandingPageWrapper({ user }: { user: User | null }) {
   const navigate = useNavigate();
+  const savedUser = localStorage.getItem('user');
   const isLoggedIn = !!user;
   
   let username: string | undefined;
