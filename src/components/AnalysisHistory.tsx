@@ -3,7 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { FileText, Calendar, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Link as LinkIcon, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { contentApi, type HistoryCheck } from '../api/content';
 
@@ -105,15 +105,26 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
     return statusTexts[dangerLevel] || dangerLevel;
   };
 
-  const getRiskBadgeColor = (dangerScore: number) => {
-    const score = dangerScore > 1 ? dangerScore : dangerScore * 100;
+  const getRiskBadgeColor = (dangerScore: number, contentType?: string, dangerLevel?: string) => {
+    let score = dangerScore > 1 ? dangerScore : dangerScore * 100;
+    
+    if (contentType === 'url' && (dangerLevel === 'safe' || dangerLevel === 'low' || dangerLevel === 'legitimate')) {
+      score = 100 - score;
+    }
+    
     if (score < 30) return 'bg-green-100 text-green-700 border border-green-300';
     if (score < 70) return 'bg-orange-100 text-orange-700 border border-orange-300';
     return 'bg-red-100 text-red-700 border border-red-300';
   };
 
-  const formatDangerScore = (score: number) => {
-    return score > 1 ? score.toFixed(2) : (score * 100).toFixed(2);
+  const formatDangerScore = (score: number, contentType?: string, dangerLevel?: string) => {
+    let finalScore = score > 1 ? score : score * 100;
+    
+    if (contentType === 'url' && (dangerLevel === 'safe' || dangerLevel === 'low' || dangerLevel === 'legitimate')) {
+      finalScore = 100 - finalScore;
+    }
+    
+    return finalScore.toFixed(2);
   };
 
   const handlePageChange = (page: number) => {
@@ -172,22 +183,38 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <FileText className="h-5 w-5 text-gray-500" />
+                    <div className="flex items-center space-x-3 mb-3 flex-wrap gap-y-2">
+                      {item.content_type === 'url' ? (
+                        <LinkIcon className="h-5 w-5 text-blue-500" />
+                      ) : (
+                        <MessageSquare className="h-5 w-5 text-gray-500" />
+                      )}
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          item.content_type === 'url' 
+                            ? 'bg-blue-50 text-blue-700 border-blue-300' 
+                            : 'bg-gray-50 text-gray-700 border-gray-300'
+                        }`}
+                      >
+                        {item.content_type === 'url' ? 'URL' : 'Текст'}
+                      </Badge>
                       <Badge className={getStatusBadge(item.danger_level, item.danger_score)}>
                         <StatusIcon className="h-3 w-3 mr-1" />
                         {getStatusText(item.danger_level, item.danger_score)}
                       </Badge>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">Риск:</span>
-                        <span className={`px-2.5 py-1 rounded-md font-semibold text-sm ${getRiskBadgeColor(item.danger_score)}`}>
-                          {formatDangerScore(item.danger_score)}%
+                        <span className={`px-2.5 py-1 rounded-md font-semibold text-sm ${getRiskBadgeColor(item.danger_score, item.content_type, item.danger_level)}`}>
+                          {formatDangerScore(item.danger_score, item.content_type, item.danger_level)}%
                         </span>
                       </div>
                     </div>
 
                     <div className="mb-3">
-                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-200">
+                      <p className={`text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-200 ${
+                        item.content_type === 'url' ? 'break-all' : ''
+                      }`}>
                         {item.content.length > 200 
                           ? item.content.substring(0, 200) + '...' 
                           : item.content

@@ -6,9 +6,9 @@ import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
-import { FileText, Image, Video, Upload, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Image, Video, Upload, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
 import { toast } from "sonner";
-import { contentApi, type TextAnalysisResponse } from '../api/content';
+import { contentApi, type TextAnalysisResponse, type UrlAnalysisResponse } from '../api/content';
 
 interface ContentAnalyzerProps {
   userId: string;
@@ -22,6 +22,8 @@ interface AnalysisResult {
   label: string;
   timestamp: string;
   processingTime: number;
+  reasons?: string[];
+  verdict?: string;
 }
 
 export function ContentAnalyzer({ }: ContentAnalyzerProps) {
@@ -40,35 +42,77 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
 
   const handleAnalyze = async () => {
     if (!content.trim()) {
-      toast.error('Введите текст для анализа');
+      toast.error(activeType === 'url' ? 'Введите URL для проверки' : 'Введите текст для анализа');
       return;
+    }
+
+    if (activeType === 'url') {
+      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+      const isValidUrl = urlPattern.test(content.trim());
+      
+      if (!isValidUrl) {
+        try {
+          new URL(content.trim().startsWith('http') ? content.trim() : `https://${content.trim()}`);
+        } catch {
+          toast.error('Пожалуйста, введите корректный URL адрес', {
+            description: 'Например: https://example.com или example.com'
+          });
+          return;
+        }
+      }
     }
 
     setIsAnalyzing(true);
     setResult(null);
 
     try {
-      const response: TextAnalysisResponse = await contentApi.analyzeText(content);
-
-      if (response.success) {
-        const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
+      if (activeType === 'url') {
+        const response: UrlAnalysisResponse = await contentApi.analyzeUrl(content);
+        
+        const isScamContent = response.verdict === 'malicious' || response.verdict === 'phishing';
         
         const analysisResult: AnalysisResult = {
           checkId: response.check_id,
-          content: content,
-          confidence: response.prediction.confidence,
+          content: response.url,
+          confidence: response.confidence,
           isScam: isScamContent,
-          label: response.prediction.label,
-          timestamp: new Date().toISOString(),
-          processingTime: response.processing_time
+          label: response.verdict,
+          verdict: response.verdict,
+          reasons: response.reasons,
+          timestamp: response.checked_at,
+          processingTime: 0
         };
 
         setResult(analysisResult);
         
         if (isScamContent) {
-          toast.error('Обнаружен мошеннический контент!');
+          toast.error('Обнаружена опасная ссылка!');
         } else {
-          toast.success('Контент безопасен');
+          toast.success('Ссылка безопасна');
+        }
+      } else {
+        const response: TextAnalysisResponse = await contentApi.analyzeText(content);
+
+        if (response.success) {
+          const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
+          
+          const analysisResult: AnalysisResult = {
+            checkId: response.check_id,
+            content: content,
+            confidence: response.prediction.confidence,
+            isScam: isScamContent,
+            label: response.prediction.label,
+            timestamp: new Date().toISOString(),
+            processingTime: response.processing_time
+          };
+
+          setResult(analysisResult);
+          
+          if (isScamContent) {
+            toast.error('Обнаружен мошеннический контент!');
+          } else {
+            toast.success('Контент безопасен');
+          }
         }
       }
     } catch (error: any) {
@@ -120,12 +164,15 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
 
   const getStatusBadge = (label: string) => {
     if (label === 'legitimate') return 'bg-green-100 text-green-800';
+    if (label === 'malicious') return 'bg-red-100 text-red-800';
+    if (label === 'phishing') return 'bg-red-100 text-red-800';
     return 'bg-red-100 text-red-800';
   };
 
   const getStatusText = (label: string) => {
     if (label === 'legitimate') return 'Легитимный контент';
     if (label === 'phishing') return 'Фишинг';
+    if (label === 'malicious') return 'Вредоносный контент';
     return label;
   };
 
@@ -185,10 +232,14 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
             <Input
               id="url-content"
               type="url"
-              placeholder="https://example.com"
+              placeholder="https://example.com или example.com"
               value={content}
               onChange={(e) => setContent(e.target.value)}
             />
+            <p className="text-xs text-gray-500 flex items-center gap-1.5">
+              <AlertTriangle className="h-3 w-3" />
+              Введите корректный URL адрес для проверки (например: https://example.com)
+            </p>
           </div>
         )}
 
@@ -233,14 +284,14 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
       </Button>
 
       {result && (
-        <Card className={`border-2 ${getRiskColor(result.label, result.confidence)}`}>
+        <Card className={`border-2 ${getRiskColor(result.verdict || result.label, result.confidence)}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="text-xl">Результат анализа</span>
-              <Badge className={getStatusBadge(result.label)} style={{ fontSize: '0.875rem', padding: '0.5rem 0.75rem' }}>
-                {result.label === 'legitimate' && <CheckCircle className="h-4 w-4 mr-1.5" />}
-                {result.label === 'phishing' && <AlertTriangle className="h-4 w-4 mr-1.5" />}
-                {getStatusText(result.label)}
+              <Badge className={getStatusBadge(result.verdict || result.label)} style={{ fontSize: '0.875rem', padding: '0.5rem 0.75rem' }}>
+                {((result.verdict === 'legitimate' || result.label === 'legitimate') && <CheckCircle className="h-4 w-4 mr-1.5" />)}
+                {((result.verdict === 'phishing' || result.verdict === 'malicious' || result.label === 'phishing') && <AlertTriangle className="h-4 w-4 mr-1.5" />)}
+                {getStatusText(result.verdict || result.label)}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -256,7 +307,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
 
             <div>
               <div className="flex justify-between items-center mb-3">
-                <span className="text-base font-semibold text-gray-700">Уверенность модели</span>
+                <span className="text-base font-semibold text-gray-700">Уверенность {result.verdict ? 'проверки' : 'модели'}</span>
                 <span className="text-2xl font-bold text-gray-900">{getRiskScore(result.confidence)}%</span>
               </div>
               <Progress value={getRiskScore(result.confidence)} className="h-3" />
@@ -265,16 +316,53 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                 <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start">
                   <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-yellow-800">
-                    <strong>Внимание:</strong> Модель не полностью уверена в результате. 
+                    <strong>Внимание:</strong> {result.verdict ? 'Проверка' : 'Модель'} не полностью уверена в результате. 
                     Рекомендуется дополнительная проверка и осторожность при принятии решений.
                   </p>
                 </div>
               )}
             </div>
 
+            {result.reasons && result.reasons.length > 0 && (
+              <div>
+                <Label className="text-base mb-3 block font-semibold text-gray-700">Детали проверки:</Label>
+                <div className="space-y-2">
+                  {result.reasons.map((reason, index) => {
+                    const isClean = reason.includes('clean') || reason.includes('not_found');
+                    return (
+                      <div 
+                        key={index} 
+                        className={`${
+                          isClean 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-red-50 border-red-200'
+                        } border rounded-lg p-3 flex items-start`}
+                      >
+                        <Shield className={`h-5 w-5 ${isClean ? 'text-green-600' : 'text-red-600'} mr-2 mt-0.5 flex-shrink-0`} />
+                        <p className={`text-sm ${isClean ? 'text-green-900' : 'text-red-900'}`}>
+                          {reason === 'not_found_in_blacklists' ? '✓ URL не найден в базах вредоносных сайтов' :
+                           reason === 'urlhaus_database' ? '⚠ URL найден в базе URLhaus (вредоносный)' :
+                           reason === 'domain_heuristics' ? '⚠ Обнаружены подозрительные признаки домена' :
+                           reason === 'all_checks_failed' ? '⚠ Не удалось выполнить проверку' :
+                           reason === 'invalid_url_format' ? '⚠ Некорректный формат URL' :
+                           reason}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded p-2">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  <span>Проверено через: URLhaus API, эвристический анализ домена</span>
+                </div>
+              </div>
+            )}
+
             <div>
-              <Label className="text-base mb-2 block font-semibold text-gray-700">Проверенный текст:</Label>
-              <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg max-h-40 overflow-y-auto border border-gray-200">
+              <Label className="text-base mb-2 block font-semibold text-gray-700">
+                {result.verdict ? 'Проверенный URL:' : 'Проверенный текст:'}
+              </Label>
+              <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg max-h-40 overflow-y-auto border border-gray-200 break-all">
                 {result.content}
               </p>
             </div>

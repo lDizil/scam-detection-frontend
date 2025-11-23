@@ -11,6 +11,15 @@ export interface TextAnalysisResponse {
   processing_time: number;
 }
 
+export interface UrlAnalysisResponse {
+  check_id: number;
+  url: string;
+  verdict: string;
+  confidence: number;
+  reasons: string[];
+  checked_at: string;
+}
+
 export interface BatchAnalysisResponse {
   check_ids: number[];
   success: boolean;
@@ -25,6 +34,7 @@ export interface BatchAnalysisResponse {
 export interface HistoryCheck {
   id: number;
   title: string;
+  content_type: string;
   content: string;
   danger_score: number;
   danger_level: string;
@@ -40,18 +50,28 @@ export interface HistoryResponse {
   limit: number;
 }
 
-// Request types
+export interface StatsResponse {
+  total_analyses: number;
+  safe_count: number;
+  suspicious_count: number;
+  dangerous_count: number;
+  average_risk_score: number;
+  average_processing_time: number;
+}
+
 export interface TextAnalysisRequest {
   text: string;
+}
+
+export interface UrlAnalysisRequest {
+  url: string;
 }
 
 export interface BatchAnalysisRequest {
   texts: string[];
 }
 
-// API methods
 export const contentApi = {
-  // Анализ одного текста
   analyzeText: async (text: string): Promise<TextAnalysisResponse> => {
     const response = await apiClient.post<TextAnalysisResponse>(
       '/analysis/text',
@@ -60,7 +80,14 @@ export const contentApi = {
     return response.data;
   },
 
-  // Пакетный анализ (до 100 текстов)
+  analyzeUrl: async (url: string): Promise<UrlAnalysisResponse> => {
+    const response = await apiClient.post<UrlAnalysisResponse>(
+      '/analysis/url',
+      { url }
+    );
+    return response.data;
+  },
+
   analyzeBatch: async (texts: string[]): Promise<BatchAnalysisResponse> => {
     if (texts.length > 100) {
       throw new Error('Максимум 100 текстов за раз');
@@ -72,12 +99,16 @@ export const contentApi = {
     return response.data;
   },
 
-  // История анализов
   getHistory: async (page = 1, limit = 20): Promise<HistoryResponse> => {
     const response = await apiClient.get<HistoryResponse>(
       '/analysis/history',
       { params: { page, limit } }
     );
+    return response.data;
+  },
+
+  getStats: async (): Promise<StatsResponse> => {
+    const response = await apiClient.get<StatsResponse>('/analysis/stats');
     return response.data;
   },
 };
