@@ -20,6 +20,19 @@ export interface UrlAnalysisResponse {
   checked_at: string;
 }
 
+export interface ImageAnalysisResponse {
+  check_id: number;
+  success: boolean;
+  extracted_text: string;
+  prediction: {
+    label: string;
+    confidence: number;
+    is_scam: boolean;
+  };
+  processing_time: number;
+  message?: string;
+}
+
 export interface BatchAnalysisResponse {
   check_ids: number[];
   success: boolean;
@@ -88,6 +101,22 @@ export const contentApi = {
     return response.data;
   },
 
+  analyzeImage: async (file: File): Promise<ImageAnalysisResponse> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const response = await apiClient.post<ImageAnalysisResponse>(
+      '/analysis/image',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
   analyzeBatch: async (texts: string[]): Promise<BatchAnalysisResponse> => {
     if (texts.length > 100) {
       throw new Error('Максимум 100 текстов за раз');
@@ -110,5 +139,9 @@ export const contentApi = {
   getStats: async (): Promise<StatsResponse> => {
     const response = await apiClient.get<StatsResponse>('/analysis/stats');
     return response.data;
+  },
+
+  deleteCheck: async (id: number): Promise<void> => {
+    await apiClient.delete(`/analysis/history/${id}`);
   },
 };

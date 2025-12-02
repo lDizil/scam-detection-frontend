@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Textarea } from './ui/textarea';
@@ -8,7 +8,7 @@ import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { FileText, Image, Video, Upload, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
 import { toast } from "sonner";
-import { contentApi, type TextAnalysisResponse, type UrlAnalysisResponse } from '../api/content';
+import { contentApi, type TextAnalysisResponse, type UrlAnalysisResponse, type ImageAnalysisResponse } from '../api/content';
 
 interface ContentAnalyzerProps {
   userId: string;
@@ -24,6 +24,7 @@ interface AnalysisResult {
   processingTime: number;
   reasons?: string[];
   verdict?: string;
+  extractedText?: string;
 }
 
 export function ContentAnalyzer({ }: ContentAnalyzerProps) {
@@ -32,6 +33,8 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const contentTypes = [
     { type: 'text' as const, label: 'Текст', icon: FileText },
@@ -41,7 +44,12 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
   ];
 
   const handleAnalyze = async () => {
-    if (!content.trim()) {
+    if (activeType === 'image') {
+      if (!file) {
+        toast.error('Загрузите изображение для анализа');
+        return;
+      }
+    } else if (!content.trim()) {
       toast.error(activeType === 'url' ? 'Введите URL для проверки' : 'Введите текст для анализа');
       return;
     }
@@ -66,7 +74,36 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
     setResult(null);
 
     try {
-      if (activeType === 'url') {
+      if (activeType === 'image' && file) {
+        const response: ImageAnalysisResponse = await contentApi.analyzeImage(file);
+        
+        if (!response.extracted_text) {
+          toast.warning('Текст не обнаружен на изображении');
+          setIsAnalyzing(false);
+          return;
+        }
+        
+        const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
+        
+        const analysisResult: AnalysisResult = {
+          checkId: response.check_id,
+          content: file.name,
+          extractedText: response.extracted_text,
+          confidence: response.prediction.confidence,
+          isScam: isScamContent,
+          label: response.prediction.label,
+          timestamp: new Date().toISOString(),
+          processingTime: response.processing_time
+        };
+
+        setResult(analysisResult);
+        
+        if (isScamContent) {
+          toast.error('Обнаружен мошеннический контент на изображении!');
+        } else {
+          toast.success('Изображение безопасно');
+        }
+      } else if (activeType === 'url') {
         const response: UrlAnalysisResponse = await contentApi.analyzeUrl(content);
         
         const isScamContent = response.verdict === 'malicious' || response.verdict === 'phishing';
@@ -179,10 +216,57 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+      if (activeType === 'image') {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/tiff'];
+        if (!allowedTypes.includes(selectedFile.type)) {
+          toast.error('Неподдерживаемый формат', {
+            description: 'Поддерживаются: JPG, PNG, BMP, TIFF'
+          });
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(selectedFile);
+      }
+      
       setFile(selectedFile);
       setContent('');
     }
   };
+
+  useEffect(() => {
+    if (activeType === 'image') {
+      const handleGlobalPaste = (e: ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            if (blob) {
+              const file = new File([blob], `pasted-image-${Date.now()}.png`, { type: blob.type });
+              setFile(file);
+              
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+              };
+              reader.readAsDataURL(file);
+              
+              toast.success('Изображение вставлено из буфера обмена');
+            }
+            break;
+          }
+        }
+      };
+      
+      window.addEventListener('paste', handleGlobalPaste);
+      return () => window.removeEventListener('paste', handleGlobalPaste);
+    }
+  }, [activeType]);
 
   return (
     <div className="space-y-6">
@@ -197,6 +281,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                 setActiveType(type);
                 setContent('');
                 setFile(null);
+                setImagePreview(null);
                 setResult(null);
               }}
               className={`h-auto py-4 flex-col space-y-2 transition-all ${
@@ -244,20 +329,42 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
         )}
 
         {(activeType === 'image' || activeType === 'video') && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="file-upload" className="text-base">
               Загрузить {activeType === 'image' ? 'изображение' : 'видео'}
             </Label>
             <Input
+              ref={fileInputRef}
               id="file-upload"
               type="file"
-              accept={activeType === 'image' ? 'image/*' : 'video/*'}
+              accept={activeType === 'image' ? 'image/jpeg,image/jpg,image/png,image/bmp,image/tiff' : 'video/*'}
               onChange={handleFileChange}
               className="cursor-pointer"
             />
+            {activeType === 'image' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800 flex items-start gap-2">
+                  <Shield className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong>Совет:</strong> Нажмите <kbd className="px-1.5 py-0.5 bg-white border border-blue-300 rounded text-xs">Ctrl+V</kbd> чтобы вставить изображение из буфера обмена (например, скриншот)
+                  </span>
+                </p>
+              </div>
+            )}
+            {imagePreview && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Предпросмотр:</p>
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  className="max-w-full max-h-64 rounded-lg border-2 border-gray-200 object-contain"
+                />
+              </div>
+            )}
             {file && (
-              <p className="text-sm text-gray-600 mt-2">
-                Выбран файл: {file.name}
+              <p className="text-sm text-gray-600 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Выбран файл: <strong>{file.name}</strong></span>
               </p>
             )}
           </div>
@@ -266,7 +373,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
 
       <Button 
         onClick={handleAnalyze} 
-        disabled={isAnalyzing || !content.trim()}
+        disabled={isAnalyzing || (activeType === 'image' ? !file : !content.trim())}
         className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-300 disabled:text-gray-500"
         size="lg"
       >
@@ -358,9 +465,20 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
               </div>
             )}
 
+            {result.extractedText && (
+              <div>
+                <Label className="text-base mb-2 block font-semibold text-gray-700">Извлеченный текст из изображения:</Label>
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap font-mono">
+                    {result.extractedText}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label className="text-base mb-2 block font-semibold text-gray-700">
-                {result.verdict ? 'Проверенный URL:' : 'Проверенный текст:'}
+                {result.extractedText ? 'Имя файла:' : result.verdict ? 'Проверенный URL:' : 'Проверенный текст:'}
               </Label>
               <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg max-h-40 overflow-y-auto border border-gray-200 break-all">
                 {result.content}
