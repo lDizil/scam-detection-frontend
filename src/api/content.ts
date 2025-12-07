@@ -33,6 +33,19 @@ export interface ImageAnalysisResponse {
   message?: string;
 }
 
+export interface VideoAnalysisResponse {
+  check_id: number;
+  success: boolean;
+  transcription: string;
+  prediction: {
+    label: string;
+    confidence: number;
+    is_scam: boolean;
+  };
+  processing_time: number;
+  message?: string;
+}
+
 export interface BatchAnalysisResponse {
   check_ids: number[];
   success: boolean;
@@ -107,6 +120,22 @@ export const contentApi = {
     
     const response = await apiClient.post<ImageAnalysisResponse>(
       '/analysis/image',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  analyzeVideo: async (file: File): Promise<VideoAnalysisResponse> => {
+    const formData = new FormData();
+    formData.append('video', file);
+    
+    const response = await apiClient.post<VideoAnalysisResponse>(
+      '/analysis/video',
       formData,
       {
         headers: {

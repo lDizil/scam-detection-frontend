@@ -8,7 +8,7 @@ import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { FileText, Image, Video, Upload, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
 import { toast } from "sonner";
-import { contentApi, type TextAnalysisResponse, type UrlAnalysisResponse, type ImageAnalysisResponse } from '../api/content';
+import { contentApi, type TextAnalysisResponse, type UrlAnalysisResponse, type ImageAnalysisResponse, type VideoAnalysisResponse } from '../api/content';
 
 interface ContentAnalyzerProps {
   userId: string;
@@ -25,6 +25,7 @@ interface AnalysisResult {
   reasons?: string[];
   verdict?: string;
   extractedText?: string;
+  transcription?: string;
 }
 
 export function ContentAnalyzer({ }: ContentAnalyzerProps) {
@@ -34,6 +35,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const contentTypes = [
@@ -47,6 +49,18 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
     if (activeType === 'image') {
       if (!file) {
         toast.error('Загрузите изображение для анализа');
+        return;
+      }
+    } else if (activeType === 'video') {
+      if (!file) {
+        toast.error('Загрузите видео для анализа');
+        return;
+      }
+      const maxSize = 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error('Файл слишком большой', {
+          description: 'Максимальный размер видео: 50MB'
+        });
         return;
       }
     } else if (!content.trim()) {
@@ -74,7 +88,36 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
     setResult(null);
 
     try {
-      if (activeType === 'image' && file) {
+      if (activeType === 'video' && file) {
+        const response: VideoAnalysisResponse = await contentApi.analyzeVideo(file);
+        
+        if (!response.transcription) {
+          toast.warning('Речь не обнаружена в видео');
+          setIsAnalyzing(false);
+          return;
+        }
+        
+        const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
+        
+        const analysisResult: AnalysisResult = {
+          checkId: response.check_id,
+          content: file.name,
+          transcription: response.transcription,
+          confidence: response.prediction.confidence,
+          isScam: isScamContent,
+          label: response.prediction.label,
+          timestamp: new Date().toISOString(),
+          processingTime: response.processing_time
+        };
+
+        setResult(analysisResult);
+        
+        if (isScamContent) {
+          toast.error('Обнаружен мошеннический контент в видео!');
+        } else {
+          toast.success('Видео безопасно');
+        }
+      } else if (activeType === 'image' && file) {
         const response: ImageAnalysisResponse = await contentApi.analyzeImage(file);
         
         if (!response.extracted_text) {
@@ -157,6 +200,14 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
       
       if (error.response?.status === 401) {
         toast.error('Необходима авторизация');
+      } else if (error.response?.status === 400) {
+        toast.error('Ошибка валидации', {
+          description: error.response?.data?.error || 'Неподдерживаемый формат или превышен лимит размера'
+        });
+      } else if (error.response?.status === 500 && activeType === 'video') {
+        toast.error('Ошибка обработки видео', {
+          description: 'Не удалось обработать видео. Попробуйте другой файл.'
+        });
       } else if (error.request) {
         toast.error('Не удалось подключиться к серверу');
       } else {
@@ -230,6 +281,31 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
           setImagePreview(reader.result as string);
         };
         reader.readAsDataURL(selectedFile);
+        setVideoPreview(null);
+      } else if (activeType === 'video') {
+        const allowedTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-matroska', 'video/webm'];
+        const allowedExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+        const fileName = selectedFile.name.toLowerCase();
+        const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+        
+        if (!allowedTypes.includes(selectedFile.type) && !hasValidExtension) {
+          toast.error('Неподдерживаемый формат', {
+            description: 'Поддерживаются: MP4, AVI, MOV, MKV, WEBM'
+          });
+          return;
+        }
+        
+        const maxSize = 50 * 1024 * 1024;
+        if (selectedFile.size > maxSize) {
+          toast.error('Файл слишком большой', {
+            description: 'Максимальный размер видео: 50MB'
+          });
+          return;
+        }
+        
+        const videoUrl = URL.createObjectURL(selectedFile);
+        setVideoPreview(videoUrl);
+        setImagePreview(null);
       }
       
       setFile(selectedFile);
@@ -282,6 +358,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                 setContent('');
                 setFile(null);
                 setImagePreview(null);
+                setVideoPreview(null);
                 setResult(null);
               }}
               className={`h-auto py-4 flex-col space-y-2 transition-all ${
@@ -351,6 +428,16 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                 </p>
               </div>
             )}
+            {activeType === 'video' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs text-amber-800 flex items-start gap-2">
+                  <Video className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong>Ограничения:</strong> Макс. размер 50MB, длительность до 5 минут. Форматы: MP4, AVI, MOV, MKV, WEBM. Обработка может занять 5-15 секунд.
+                  </span>
+                </p>
+              </div>
+            )}
             {imagePreview && (
               <div className="mt-3">
                 <p className="text-sm font-medium text-gray-700 mb-2">Предпросмотр:</p>
@@ -358,6 +445,16 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                   src={imagePreview} 
                   alt="Preview" 
                   className="max-w-full max-h-64 rounded-lg border-2 border-gray-200 object-contain"
+                />
+              </div>
+            )}
+            {videoPreview && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Предпросмотр видео:</p>
+                <video 
+                  src={videoPreview} 
+                  controls
+                  className="max-w-full max-h-64 rounded-lg border-2 border-gray-200"
                 />
               </div>
             )}
@@ -373,7 +470,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
 
       <Button 
         onClick={handleAnalyze} 
-        disabled={isAnalyzing || (activeType === 'image' ? !file : !content.trim())}
+        disabled={isAnalyzing || ((activeType === 'image' || activeType === 'video') ? !file : !content.trim())}
         className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-300 disabled:text-gray-500"
         size="lg"
       >
@@ -476,9 +573,20 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
               </div>
             )}
 
+            {result.transcription && (
+              <div>
+                <Label className="text-base mb-2 block font-semibold text-gray-700">Распознанная речь из видео:</Label>
+                <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap font-mono">
+                    {result.transcription}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label className="text-base mb-2 block font-semibold text-gray-700">
-                {result.extractedText ? 'Имя файла:' : result.verdict ? 'Проверенный URL:' : 'Проверенный текст:'}
+                {(result.extractedText || result.transcription) ? 'Имя файла:' : result.verdict ? 'Проверенный URL:' : 'Проверенный текст:'}
               </Label>
               <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg max-h-40 overflow-y-auto border border-gray-200 break-all">
                 {result.content}
