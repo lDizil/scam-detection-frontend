@@ -11,10 +11,16 @@ export interface RegisterRequest {
   password: string;
 }
 
+export type UserRole = 'user' | 'moderator' | 'admin';
+
 export interface User {
   id: string;
   username: string;
   email?: string;
+  role: UserRole;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProfileUpdateRequest {

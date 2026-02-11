@@ -1,16 +1,13 @@
 ﻿import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Toaster } from './components/ui/sonner';
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
 import { Profile } from './components/Profile';
 import { authApi } from './api/auth';
 
-interface User {
-  id: string;
-  email?: string;
-  username: string;
-}
+import type { User } from './api/auth';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -57,6 +54,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Toaster />
       <Routes>
         <Route 
           path="/" 

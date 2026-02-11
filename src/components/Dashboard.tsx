@@ -2,17 +2,16 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle, User as UserIcon } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle, User as UserIcon, Users, Activity } from 'lucide-react';
 import { ContentAnalyzer } from './ContentAnalyzer';
 import { AnalysisHistory } from './AnalysisHistory';
 import { StatsOverview } from './StatsOverview';
+import { AdminPanel } from './AdminPanel';
+import { ModeratorPanel } from './ModeratorPanel';
 import { Link, useNavigate } from 'react-router-dom';
-
-interface User {
-  id: string;
-  email?: string;
-  username: string;
-}
+import type { User } from '../api/auth';
+import { isAdmin, isModerator, getRoleDisplayName } from '../utils/roleUtils';
 
 interface DashboardProps {
   user: User;
@@ -22,6 +21,9 @@ interface DashboardProps {
 export function Dashboard({ user, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState('analyze');
   const navigate = useNavigate();
+  
+  const userIsAdmin = isAdmin(user);
+  const userIsModerator = isModerator(user);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -35,12 +37,23 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
 
           
           <div className="flex items-center space-x-4">
-            <div className="text-lg">
+            <div className="text-lg flex items-center space-x-3">
               <p className="text-gray-600">
                 Добро пожаловать, <span className="font-semibold text-gray-900">
                   {user.username || user.email || 'Пользователь'}
                 </span>
               </p>
+              <Badge variant={
+                user.role === 'admin' ? 'destructive' :
+                user.role === 'moderator' ? 'default' :
+                'secondary'
+              } className={
+                user.role === 'admin' ? 'bg-red-100 text-red-800 hover:bg-red-100' :
+                user.role === 'moderator' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' :
+                ''
+              }>
+                {getRoleDisplayName(user.role)}
+              </Badge>
             </div>
             <Button 
               variant="outline" 
@@ -70,7 +83,11 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
 
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className={`grid w-full ${
+            userIsAdmin ? 'grid-cols-5 max-w-4xl' :
+            userIsModerator ? 'grid-cols-4 max-w-3xl' :
+            'grid-cols-3 max-w-xl'
+          }`}>
             <TabsTrigger value="analyze" className="flex items-center space-x-2">
               <Upload className="h-4 w-4" />
               <span>Анализ</span>
@@ -83,6 +100,22 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               <BarChart3 className="h-4 w-4" />
               <span>Статистика</span>
             </TabsTrigger>
+            
+            {/* Вкладка для модераторов и админов */}
+            {userIsModerator && (
+              <TabsTrigger value="moderator" className="flex items-center space-x-2">
+                <Activity className="h-4 w-4" />
+                <span>Модерация</span>
+              </TabsTrigger>
+            )}
+            
+            {/* Вкладка только для админов */}
+            {userIsAdmin && (
+              <TabsTrigger value="admin" className="flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <span>Администрирование</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="analyze" className="space-y-6">
@@ -116,6 +149,20 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
           <TabsContent value="stats" className="space-y-6">
             <StatsOverview userId={user.id} />
           </TabsContent>
+          
+          {/* Панель модератора */}
+          {userIsModerator && (
+            <TabsContent value="moderator" className="space-y-6">
+              <ModeratorPanel />
+            </TabsContent>
+          )}
+          
+          {/* Панель администратора */}
+          {userIsAdmin && (
+            <TabsContent value="admin" className="space-y-6">
+              <AdminPanel currentUserId={user.id} />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>

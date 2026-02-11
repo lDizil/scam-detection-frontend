@@ -103,5 +103,18 @@ apiClient.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 403) {
+      const errorMessage = error.response?.data?.error || '';
+      
+      if (errorMessage.includes('заблокирована') || errorMessage.includes('blocked')) {
+        localStorage.removeItem('user');
+        
+        if (!window.location.pathname.includes('/auth') && 
+            window.location.pathname !== '/') {
+          window.location.href = '/auth?blocked=true';
+        }
+      }
+    }
+
     return Promise.reject(error);
   });

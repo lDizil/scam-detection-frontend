@@ -4,8 +4,10 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Shield, ArrowLeft, User, Mail, AlertTriangle, Trash2, Save } from 'lucide-react';
-import { authApi } from '../api/auth';
+import { Badge } from './ui/badge';
+import { Shield, ArrowLeft, User as UserIcon, Mail, AlertTriangle, Trash2, Save } from 'lucide-react';
+import { authApi, type User } from '../api/auth';
+import { getRoleDisplayName } from '../utils/roleUtils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,12 +21,8 @@ import {
 } from "./ui/alert-dialog";
 
 interface ProfileProps {
-  user: {
-    id: string;
-    username: string;
-    email?: string;
-  };
-  onUpdate: (user: { id: string; username: string; email?: string }) => void;
+  user: User;
+  onUpdate: (user: User) => void;
   onLogout: () => void;
 }
 
@@ -159,11 +157,36 @@ export function Profile({ user, onUpdate, onLogout }: ProfileProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <User className="h-5 w-5 text-blue-600" />
+              <UserIcon className="h-5 w-5 text-blue-600" />
               <span>Информация о профиле</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Роль:</span>
+                <Badge variant={
+                  user.role === 'admin' ? 'destructive' :
+                  user.role === 'moderator' ? 'default' :
+                  'secondary'
+                } className={
+                  user.role === 'admin' ? 'bg-red-100 text-red-800 hover:bg-red-100' :
+                  user.role === 'moderator' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' :
+                  ''
+                }>
+                  {getRoleDisplayName(user.role)}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Статус аккаунта:</span>
+                <Badge variant={user.is_active ? 'default' : 'destructive'} className={
+                  user.is_active ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''
+                }>
+                  {user.is_active ? 'Активен' : 'Заблокирован'}
+                </Badge>
+              </div>
+            </div>
+            
             {/* Success Message */}
             {success && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start">
@@ -187,7 +210,7 @@ export function Profile({ user, onUpdate, onLogout }: ProfileProps) {
                   Имя пользователя
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
+                  <UserIcon className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400" />
                   <Input
                     id="username"
                     type="text"

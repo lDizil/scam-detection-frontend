@@ -1,18 +1,22 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Shield, ArrowLeft, Mail, Lock, User, AlertTriangle, Eye, EyeOff } from 'lucide-react';
-import { authApi } from '../api/auth';
+import { authApi, type User as UserType } from '../api/auth';
 
 interface AuthPageProps {
-  onLogin: (user: { id: string; email?: string; username: string }) => void;
+  onLogin: (user: UserType) => void;
   onBackToLanding: () => void;
 }
 
 export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
+  const [searchParams] = useSearchParams();
+  const isBlocked = searchParams.get('blocked') === 'true';
+  
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [registerData, setRegisterData] = useState({ 
     username: '', 
@@ -26,6 +30,12 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  useEffect(() => {
+    if (isBlocked) {
+      setLoginError('Ваш аккаунт был заблокирован администратором. Обратитесь в службу поддержки.');
+    }
+  }, [isBlocked]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

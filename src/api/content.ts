@@ -59,6 +59,8 @@ export interface BatchAnalysisResponse {
 
 export interface HistoryCheck {
   id: number;
+  user_id?: number;
+  username?: string;
   title: string;
   content_type: string;
   content: string;
