@@ -69,6 +69,7 @@ export interface HistoryCheck {
   status: string;
   processing_time_ms: number;
   created_at: string;
+  file_path?: string;
 }
 
 export interface HistoryResponse {
@@ -169,6 +170,11 @@ export const contentApi = {
 
   getStats: async (): Promise<StatsResponse> => {
     const response = await apiClient.get<StatsResponse>('/analysis/stats');
+    return response.data;
+  },
+
+  getCheckDetails: async (checkId: number): Promise<HistoryCheck> => {
+    const response = await apiClient.get<HistoryCheck>(`/analysis/history/${checkId}`);
     return response.data;
   },
 

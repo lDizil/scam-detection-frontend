@@ -138,7 +138,7 @@ export function AdminPanel({ currentUserId }: AdminPanelProps) {
                         <SelectTrigger className="w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="!bg-white dark:!bg-gray-100 shadow-xl border-2 border-gray-300">
                           <SelectItem value="user">Пользователь</SelectItem>
                           <SelectItem value="moderator">Модератор</SelectItem>
                           <SelectItem value="admin">Администратор</SelectItem>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Textarea } from './ui/textarea';
@@ -26,6 +26,7 @@ interface AnalysisResult {
   verdict?: string;
   extractedText?: string;
   transcription?: string;
+  filePath?: string;
 }
 
 export function ContentAnalyzer({ }: ContentAnalyzerProps) {
@@ -99,6 +100,16 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
         
         const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
         
+        // Пытаемся получить детали проверки с file_path из MinIO (опционально)
+        let filePath: string | undefined;
+        try {
+          const checkDetails = await contentApi.getCheckDetails(response.check_id);
+          filePath = checkDetails.file_path;
+        } catch (error: any) {
+          console.warn('Failed to fetch file_path from MinIO:', error);
+          // Продолжаем без file_path
+        }
+        
         const analysisResult: AnalysisResult = {
           checkId: response.check_id,
           content: file.name,
@@ -107,7 +118,8 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
           isScam: isScamContent,
           label: response.prediction.label,
           timestamp: new Date().toISOString(),
-          processingTime: response.processing_time
+          processingTime: response.processing_time,
+          filePath
         };
 
         setResult(analysisResult);
@@ -128,6 +140,16 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
         
         const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
         
+        // Пытаемся получить детали проверки с file_path из MinIO (опционально)
+        let filePath: string | undefined;
+        try {
+          const checkDetails = await contentApi.getCheckDetails(response.check_id);
+          filePath = checkDetails.file_path;
+        } catch (error: any) {
+          console.warn('Failed to fetch file_path from MinIO:', error);
+          // Продолжаем без file_path
+        }
+        
         const analysisResult: AnalysisResult = {
           checkId: response.check_id,
           content: file.name,
@@ -136,7 +158,8 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
           isScam: isScamContent,
           label: response.prediction.label,
           timestamp: new Date().toISOString(),
-          processingTime: response.processing_time
+          processingTime: response.processing_time,
+          filePath
         };
 
         setResult(analysisResult);
@@ -570,6 +593,20 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                     {result.extractedText}
                   </p>
                 </div>
+                {result.filePath && (
+                  <div className="mt-4">
+                    <Label className="text-base mb-2 block font-semibold text-gray-700">Загруженное изображение:</Label>
+                    <img 
+                      src={result.filePath} 
+                      alt="Проанализированное изображение" 
+                      className="max-w-full max-h-96 rounded-lg border-2 border-gray-300 object-contain shadow-md"
+                      onError={(e) => {
+                        console.error('Failed to load image from MinIO:', result.filePath);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -581,6 +618,20 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                     {result.transcription}
                   </p>
                 </div>
+                {result.filePath && (
+                  <div className="mt-4">
+                    <Label className="text-base mb-2 block font-semibold text-gray-700">Загруженное видео:</Label>
+                    <video 
+                      src={result.filePath} 
+                      controls
+                      className="max-w-full max-h-96 rounded-lg border-2 border-gray-300 shadow-md"
+                      onError={(e) => {
+                        console.error('Failed to load video from MinIO:', result.filePath);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 

@@ -3,7 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Calendar, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Link as LinkIcon, MessageSquare, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Calendar, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Link as LinkIcon, MessageSquare, Trash2, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { contentApi, type HistoryCheck } from '../api/content';
 
@@ -20,6 +20,18 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
+
+  // Преобразование относительного пути в полный URL MinIO
+  const getMinioUrl = (filePath: string | undefined): string | undefined => {
+    if (!filePath) return undefined;
+    
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    
+    const fileName = filePath.split('/').pop();
+    return `http://localhost:9000/scam-images/${fileName}`;
+  };
 
   const loadHistory = async (page = 1) => {
     setIsLoading(true);
@@ -198,6 +210,8 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
                         <LinkIcon className="h-5 w-5 text-blue-500" />
                       ) : item.content_type === 'image' ? (
                         <ImageIcon className="h-5 w-5 text-purple-500" />
+                      ) : item.content_type === 'video' ? (
+                        <VideoIcon className="h-5 w-5 text-pink-500" />
                       ) : (
                         <MessageSquare className="h-5 w-5 text-green-500" />
                       )}
@@ -208,10 +222,12 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
                             ? 'bg-blue-50 text-blue-700 border-blue-300' 
                             : item.content_type === 'image'
                             ? 'bg-purple-50 text-purple-700 border-purple-300'
+                            : item.content_type === 'video'
+                            ? 'bg-pink-50 text-pink-700 border-pink-300'
                             : 'bg-green-50 text-green-700 border-green-300'
                         }`}
                       >
-                        {item.content_type === 'url' ? '🔗 URL' : item.content_type === 'image' ? '🖼️ Изображение' : '📝 Текст'}
+                        {item.content_type === 'url' ? '🔗 URL' : item.content_type === 'image' ? '🖼️ Изображение' : item.content_type === 'video' ? '🎬 Видео' : '📝 Текст'}
                       </Badge>
                       <Badge className={getStatusBadge(item.danger_level, item.danger_score)}>
                         <StatusIcon className="h-3 w-3 mr-1" />
@@ -234,6 +250,34 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
                           : item.content
                         }
                       </p>
+                      
+                      {item.file_path && item.content_type === 'image' && (
+                        <div className="mt-3">
+                          <img 
+                            src={getMinioUrl(item.file_path)} 
+                            alt="Проанализированное изображение" 
+                            className="max-w-full max-h-64 rounded-lg border-2 border-gray-300 object-contain shadow-sm"
+                            onError={(e) => {
+                              console.error('Failed to load image from MinIO:', getMinioUrl(item.file_path));
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      
+                      {item.file_path && item.content_type === 'video' && (
+                        <div className="mt-3">
+                          <video 
+                            src={getMinioUrl(item.file_path)} 
+                            controls
+                            className="max-w-full max-h-64 rounded-lg border-2 border-gray-300 shadow-sm"
+                            onError={(e) => {
+                              console.error('Failed to load video from MinIO:', getMinioUrl(item.file_path));
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center space-x-4 text-xs text-gray-500">
