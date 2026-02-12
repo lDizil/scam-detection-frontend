@@ -1,0 +1,27 @@
+# Правила для всех роботов
+User-agent: *
+
+# Разрешить индексацию публичных страниц
+Allow: /
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.gif$
+Allow: /*.svg$
+Allow: /*.webp$
+
+# Запретить служебные и закрытые страницы
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /admin
+Disallow: /api/
+
+# Crawl-delay для снижения нагрузки
+Crawl-delay: 1
+
+
+# Sitemap
+Sitemap: http://localhost:5173/sitemap.xml

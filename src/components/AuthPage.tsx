@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Shield, ArrowLeft, Mail, Lock, User, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { SEO } from './common/SEO';
 import { authApi, type User as UserType } from '../api/auth';
 
 interface AuthPageProps {
@@ -141,6 +142,11 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <SEO 
+        title="Авторизация"
+        description="Вход или регистрация в системе ScamGuard"
+        noindex={true}
+      />
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-10">

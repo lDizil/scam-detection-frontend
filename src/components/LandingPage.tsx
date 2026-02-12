@@ -2,6 +2,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Shield, Brain, CheckCircle, Lock, User as UserIcon } from 'lucide-react';
 import { ImageWithFallback } from './common/ImageWithFallback';
+import { SEO } from './common/SEO';
+import { generateJsonLd } from '../utils/jsonLd';
 import { Link, useNavigate } from 'react-router-dom';
 
 interface LandingPageProps {
@@ -15,6 +17,14 @@ export function LandingPage({ onGetStarted, isLoggedIn, username }: LandingPageP
   
   return (
     <div className="min-h-screen">
+      <SEO 
+        title="Главная"
+        description="Платформа для анализа и обнаружения мошеннического контента с помощью AI. Проверка текстов, изображений, видео и URL адресов на фишинг и вредоносный контент."
+        canonical="/"
+        ogTitle="ScamGuard - Защита от мошенничества с помощью AI"
+        ogDescription="Проверяйте тексты, изображения, видео и ссылки на мошеннический контент с точностью более 95%"
+        jsonLd={generateJsonLd('WebApplication')}
+      />
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -67,8 +77,11 @@ export function LandingPage({ onGetStarted, isLoggedIn, username }: LandingPageP
           <div className="flex justify-center mb-12">
             <ImageWithFallback
               src="/images/scammer.jpg"
-              alt="Fraud Detection Illustration"
+              alt="Иллюстрация системы защиты от мошенничества - анализ контента с помощью искусственного интеллекта"
               className="rounded-2xl shadow-2xl max-w-2xl mx-auto"
+              width={896}
+              height={504}
+              style={{ aspectRatio: '16/9' }}
             />
           </div>
          <Button 

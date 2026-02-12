@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Shield, LogOut, Upload, History, BarChart3, AlertTriangle, User as UserIcon, Users, Activity } from 'lucide-react';
+import { SEO } from './common/SEO';
 import { ContentAnalyzer } from './ContentAnalyzer';
 import { AnalysisHistory } from './AnalysisHistory';
 import { StatsOverview } from './StatsOverview';
@@ -27,6 +28,11 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO 
+        title="Панель управления"
+        description="Личный кабинет пользователя ScamGuard - анализ контента, история проверок и статистика"
+        noindex={true}
+      />
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">

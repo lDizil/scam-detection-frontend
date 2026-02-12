@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Shield, ArrowLeft, User as UserIcon, Mail, AlertTriangle, Trash2, Save } from 'lucide-react';
+import { SEO } from './common/SEO';
 import { authApi, type User } from '../api/auth';
 import { getRoleDisplayName } from '../utils/roleUtils';
 import {
@@ -132,6 +133,11 @@ export function Profile({ user, onUpdate, onLogout }: ProfileProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO 
+        title="Профиль"
+        description="Личный профиль пользователя ScamGuard"
+        noindex={true}
+      />
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">

@@ -1,3 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Performance optimizations */
+@layer base {
+  /* Предотвращение layout shift для изображений */
+  img {
+    @apply max-w-full h-auto;
+  }
+  
+  /* Оптимизация рендеринга текста */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Фиксация высоты для предотвращения CLS */
+  #root {
+    min-height: 100vh;
+  }
+}
