@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Calendar, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Link as LinkIcon, MessageSquare, Trash2, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { contentApi, type HistoryCheck } from '../api/content';
+import { getFileUrl } from '../utils/fileUtils';
 
 interface AnalysisHistoryProps {
   userId: string;
@@ -20,18 +21,6 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
-
-  // Преобразование относительного пути в полный URL MinIO
-  const getMinioUrl = (filePath: string | undefined): string | undefined => {
-    if (!filePath) return undefined;
-    
-    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-      return filePath;
-    }
-    
-    const fileName = filePath.split('/').pop();
-    return `http://localhost:9000/scam-images/${fileName}`;
-  };
 
   const loadHistory = async (page = 1) => {
     setIsLoading(true);
@@ -254,11 +243,11 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
                       {item.file_path && item.content_type === 'image' && (
                         <div className="mt-3">
                           <img 
-                            src={getMinioUrl(item.file_path)} 
+                            src={getFileUrl(item.file_path)} 
                             alt="Проанализированное изображение" 
                             className="max-w-full max-h-64 rounded-lg border-2 border-gray-300 object-contain shadow-sm"
                             onError={(e) => {
-                              console.error('Failed to load image from MinIO:', getMinioUrl(item.file_path));
+                              console.error('Failed to load image:', getFileUrl(item.file_path));
                               e.currentTarget.style.display = 'none';
                             }}
                           />
@@ -268,11 +257,11 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
                       {item.file_path && item.content_type === 'video' && (
                         <div className="mt-3">
                           <video 
-                            src={getMinioUrl(item.file_path)} 
+                            src={getFileUrl(item.file_path)} 
                             controls
                             className="max-w-full max-h-64 rounded-lg border-2 border-gray-300 shadow-sm"
                             onError={(e) => {
-                              console.error('Failed to load video from MinIO:', getMinioUrl(item.file_path));
+                              console.error('Failed to load video:', getFileUrl(item.file_path));
                               e.currentTarget.style.display = 'none';
                             }}
                           />

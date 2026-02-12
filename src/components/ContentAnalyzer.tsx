@@ -9,6 +9,7 @@ import { Badge } from './ui/badge';
 import { FileText, Image, Video, Upload, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
 import { toast } from "sonner";
 import { contentApi, type TextAnalysisResponse, type UrlAnalysisResponse, type ImageAnalysisResponse, type VideoAnalysisResponse } from '../api/content';
+import { getFileUrl } from '../utils/fileUtils';
 
 interface ContentAnalyzerProps {
   userId: string;
@@ -100,14 +101,12 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
         
         const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
         
-        // Пытаемся получить детали проверки с file_path из MinIO (опционально)
         let filePath: string | undefined;
         try {
           const checkDetails = await contentApi.getCheckDetails(response.check_id);
           filePath = checkDetails.file_path;
         } catch (error: any) {
           console.warn('Failed to fetch file_path from MinIO:', error);
-          // Продолжаем без file_path
         }
         
         const analysisResult: AnalysisResult = {
@@ -140,14 +139,12 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
         
         const isScamContent = response.prediction.is_scam || response.prediction.label === 'phishing';
         
-        // Пытаемся получить детали проверки с file_path из MinIO (опционально)
         let filePath: string | undefined;
         try {
           const checkDetails = await contentApi.getCheckDetails(response.check_id);
           filePath = checkDetails.file_path;
         } catch (error: any) {
           console.warn('Failed to fetch file_path from MinIO:', error);
-          // Продолжаем без file_path
         }
         
         const analysisResult: AnalysisResult = {
@@ -597,11 +594,11 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                   <div className="mt-4">
                     <Label className="text-base mb-2 block font-semibold text-gray-700">Загруженное изображение:</Label>
                     <img 
-                      src={result.filePath} 
+                      src={getFileUrl(result.filePath)} 
                       alt="Проанализированное изображение" 
                       className="max-w-full max-h-96 rounded-lg border-2 border-gray-300 object-contain shadow-md"
                       onError={(e) => {
-                        console.error('Failed to load image from MinIO:', result.filePath);
+                        console.error('Failed to load image:', getFileUrl(result.filePath));
                         e.currentTarget.style.display = 'none';
                       }}
                     />
@@ -622,11 +619,11 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
                   <div className="mt-4">
                     <Label className="text-base mb-2 block font-semibold text-gray-700">Загруженное видео:</Label>
                     <video 
-                      src={result.filePath} 
+                      src={getFileUrl(result.filePath)} 
                       controls
                       className="max-w-full max-h-96 rounded-lg border-2 border-gray-300 shadow-md"
                       onError={(e) => {
-                        console.error('Failed to load video from MinIO:', result.filePath);
+                        console.error('Failed to load video:', getFileUrl(result.filePath));
                         e.currentTarget.style.display = 'none';
                       }}
                     />
