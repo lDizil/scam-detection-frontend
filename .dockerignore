@@ -1,24 +1,17 @@
-# Logs
-logs
-*.log
+node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
 dist
 dist-ssr
 *.local
 
-# Environment variables
 .env
 .env.local
 .env.*.local
-!.env.example
 
-# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -28,3 +21,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+coverage
+
+.git
+.gitignore
+.gitattributes
+
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+.github
+
+README.md
+*.md
+
+.cache
+.eslintcache
+.prettierrc
