@@ -69,7 +69,7 @@ export const authApi = {
     try {
       const response = await apiClient.get('/profile');
       return response.data;
-    } catch (error) {
+    } catch {
       return null;
     }
   },

@@ -11,10 +11,6 @@ import { toast } from "sonner";
 import { contentApi, type TextAnalysisResponse, type UrlAnalysisResponse, type ImageAnalysisResponse, type VideoAnalysisResponse } from '../api/content';
 import { getFileUrl } from '../utils/fileUtils';
 
-interface ContentAnalyzerProps {
-  userId: string;
-}
-
 interface AnalysisResult {
   checkId: number;
   content: string;
@@ -30,7 +26,7 @@ interface AnalysisResult {
   filePath?: string;
 }
 
-export function ContentAnalyzer({ }: ContentAnalyzerProps) {
+export function ContentAnalyzer() {
   const [activeType, setActiveType] = useState<'text' | 'image' | 'video' | 'url'>('text');
   const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -71,7 +67,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
     }
 
     if (activeType === 'url') {
-      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+      const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
       const isValidUrl = urlPattern.test(content.trim());
       
       if (!isValidUrl) {
@@ -105,7 +101,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
         try {
           const checkDetails = await contentApi.getCheckDetails(response.check_id);
           filePath = checkDetails.file_path;
-        } catch (error: any) {
+        } catch (error) {
           console.warn('Failed to fetch file_path from MinIO:', error);
         }
         
@@ -143,7 +139,7 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
         try {
           const checkDetails = await contentApi.getCheckDetails(response.check_id);
           filePath = checkDetails.file_path;
-        } catch (error: any) {
+        } catch (error) {
           console.warn('Failed to fetch file_path from MinIO:', error);
         }
         
@@ -215,23 +211,24 @@ export function ContentAnalyzer({ }: ContentAnalyzerProps) {
           }
         }
       }
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { status?: number; data?: { error?: string } } };
       console.error('Analysis error:', error);
       
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         toast.error('Необходима авторизация');
-      } else if (error.response?.status === 400) {
+      } else if (err.response?.status === 400) {
         toast.error('Ошибка валидации', {
-          description: error.response?.data?.error || 'Неподдерживаемый формат или превышен лимит размера'
+          description: err.response?.data?.error || 'Неподдерживаемый формат или превышен лимит размера'
         });
-      } else if (error.response?.status === 500 && activeType === 'video') {
+      } else if (err.response?.status === 500 && activeType === 'video') {
         toast.error('Ошибка обработки видео', {
           description: 'Не удалось обработать видео. Попробуйте другой файл.'
         });
-      } else if (error.request) {
+      } else if ((err as { request?: unknown }).request) {
         toast.error('Не удалось подключиться к серверу');
       } else {
-        toast.error(error.response?.data?.error || 'Ошибка при анализе контента');
+        toast.error(err.response?.data?.error || 'Ошибка при анализе контента');
       }
     } finally {
       setIsAnalyzing(false);

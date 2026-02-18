@@ -61,17 +61,18 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
       });
       
       onLogin(user);
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string; message?: string } } };
       let errorMessage = 'Неверные данные для входа';
       
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.request) {
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if ((err as { request?: unknown }).request) {
         errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
-      } else if (error.message) {
-        errorMessage = `Ошибка: ${error.message}`;
+      } else if ((err as { message?: string }).message) {
+        errorMessage = `Ошибка: ${(err as { message: string }).message}`;
       }
       
       setLoginError(errorMessage);
@@ -121,17 +122,18 @@ export function AuthPage({ onLogin, onBackToLanding }: AuthPageProps) {
       });
 
       onLogin(user);
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string; message?: string } } };
       let errorMessage = 'Ошибка при регистрации';
       
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.request) {
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if ((err as { request?: unknown }).request) {
         errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
-      } else if (error.message) {
-        errorMessage = `Ошибка: ${error.message}`;
+      } else if ((err as { message?: string }).message) {
+        errorMessage = `Ошибка: ${(err as { message: string }).message}`;
       }
       
       setRegisterError(errorMessage);

@@ -77,17 +77,18 @@ export function Profile({ user, onUpdate, onLogout }: ProfileProps) {
       onUpdate(updatedUser);
       setSuccess('Профиль успешно обновлён');
       setIsEditing(false);
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string; message?: string } }; request?: unknown; message?: string };
       let errorMessage = 'Ошибка при обновлении профиля';
       
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.request) {
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.request) {
         errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
-      } else if (error.message) {
-        errorMessage = `Ошибка: ${error.message}`;
+      } else if (err.message) {
+        errorMessage = `Ошибка: ${err.message}`;
       }
       
       setError(errorMessage);
@@ -102,17 +103,18 @@ export function Profile({ user, onUpdate, onLogout }: ProfileProps) {
       await authApi.deleteAccount();
       onLogout();
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string; message?: string } }; request?: unknown; message?: string };
       let errorMessage = 'Ошибка при удалении аккаунта';
       
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.request) {
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.request) {
         errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение.';
-      } else if (error.message) {
-        errorMessage = `Ошибка: ${error.message}`;
+      } else if (err.message) {
+        errorMessage = `Ошибка: ${err.message}`;
       }
       
       setError(errorMessage);

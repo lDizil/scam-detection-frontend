@@ -6,10 +6,6 @@ import { BarChart3, CheckCircle, AlertTriangle, Clock, TrendingUp, Shield } from
 import { toast } from 'sonner';
 import { contentApi } from '../api/content';
 
-interface StatsOverviewProps {
-  userId: string;
-}
-
 interface StatsData {
   total_analyses: number;
   safe_count: number;
@@ -19,7 +15,7 @@ interface StatsData {
   average_processing_time: number;
 }
 
-export function StatsOverview({ }: StatsOverviewProps) {
+export function StatsOverview() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,11 +28,12 @@ export function StatsOverview({ }: StatsOverviewProps) {
     try {
       const response = await contentApi.getStats();
       setStats(response);
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { status?: number }; request?: unknown };
       console.error('Failed to load stats:', error);
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         toast.error('Необходима авторизация');
-      } else if (error.request) {
+      } else if (err.request) {
         toast.error('Не удалось подключиться к серверу');
       } else {
         toast.error('Ошибка при загрузке статистики');
@@ -163,9 +160,10 @@ export function StatsOverview({ }: StatsOverviewProps) {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry: any) => {
-                      const percent = ((entry.value / stats.total_analyses) * 100).toFixed(0);
-                      return `${entry.name}: ${entry.value} (${percent}%)`;
+                    label={(entry) => {
+                      const data = entry as unknown as { name: string; value: number };
+                      const percent = ((data.value / stats.total_analyses) * 100).toFixed(0);
+                      return `${data.name}: ${data.value} (${percent}%)`;
                     }}
                     outerRadius={100}
                     fill="#8884d8"

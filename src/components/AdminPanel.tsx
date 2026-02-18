@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -34,22 +34,23 @@ export function AdminPanel({ currentUserId }: AdminPanelProps) {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const limit = 20;
 
-  useEffect(() => {
-    loadUsers();
-  }, [page]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       const data = await adminApi.getUsers(page, limit);
       setUsers(data.users);
       setTotal(data.total);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Не удалось загрузить список пользователей');
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Не удалось загрузить список пользователей');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
@@ -57,8 +58,9 @@ export function AdminPanel({ currentUserId }: AdminPanelProps) {
       await adminApi.changeUserRole(userId, newRole);
       toast.success('Роль пользователя изменена');
       await loadUsers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Не удалось изменить роль');
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Не удалось изменить роль');
     } finally {
       setUpdatingUserId(null);
     }
@@ -75,8 +77,9 @@ export function AdminPanel({ currentUserId }: AdminPanelProps) {
       await adminApi.changeUserStatus(userId, !currentStatus);
       toast.success(currentStatus ? 'Пользователь заблокирован' : 'Пользователь разблокирован');
       await loadUsers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Не удалось изменить статус');
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Не удалось изменить статус');
     } finally {
       setUpdatingUserId(null);
     }

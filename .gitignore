@@ -28,3 +28,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+coverage
+*.lcov
+.nyc_output
+
+test-results/
+playwright-report/
+playwright/.cache/
+playwright/.auth/

@@ -8,11 +8,7 @@ import { toast } from 'sonner';
 import { contentApi, type HistoryCheck } from '../api/content';
 import { getFileUrl } from '../utils/fileUtils';
 
-interface AnalysisHistoryProps {
-  userId: string;
-}
-
-export function AnalysisHistory({ }: AnalysisHistoryProps) {
+export function AnalysisHistory() {
   const [history, setHistory] = useState<HistoryCheck[]>([]);
   const [filteredHistory, setFilteredHistory] = useState<HistoryCheck[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -31,11 +27,12 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
       setTotal(response.total);
       setCurrentPage(response.page);
       setTotalPages(Math.ceil(response.total / limit));
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { status?: number }; request?: unknown };
       console.error('Failed to load history:', error);
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         toast.error('Необходима авторизация');
-      } else if (error.request) {
+      } else if (err.request) {
         toast.error('Не удалось подключиться к серверу');
       } else {
         toast.error('Ошибка при загрузке истории');
@@ -128,13 +125,14 @@ export function AnalysisHistory({ }: AnalysisHistoryProps) {
       await contentApi.deleteCheck(id);
       toast.success('Запись удалена');
       loadHistory(currentPage);
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { status?: number } };
       console.error('Failed to delete check:', error);
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         toast.error('Необходима авторизация');
-      } else if (error.response?.status === 403) {
+      } else if (err.response?.status === 403) {
         toast.error('Нет доступа к этой записи');
-      } else if (error.response?.status === 500) {
+      } else if (err.response?.status === 500) {
         toast.error('Ошибка сервера при удалении', {
           description: 'Попробуйте позже или обратитесь к администратору'
         });

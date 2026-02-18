@@ -133,7 +133,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ContentAnalyzer userId={user.id} />
+                <ContentAnalyzer />
               </CardContent>
             </Card>
           </TabsContent>
@@ -147,13 +147,13 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <AnalysisHistory userId={user.id} />
+                <AnalysisHistory />
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
-            <StatsOverview userId={user.id} />
+            <StatsOverview />
           </TabsContent>
           
           {/* Панель модератора */}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -15,19 +15,23 @@ import type { HistoryCheck } from '../api/content';
 import { Activity, ChevronLeft, ChevronRight, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface GlobalStats {
+  total_analyses: number;
+  safe_count: number;
+  suspicious_count: number;
+  dangerous_count: number;
+  average_risk_score: number;
+}
+
 export function ModeratorPanel() {
   const [checks, setChecks] = useState<HistoryCheck[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<GlobalStats | null>(null);
   const limit = 20;
 
-  useEffect(() => {
-    loadData();
-  }, [page]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [checksData, statsData] = await Promise.all([
@@ -37,12 +41,17 @@ export function ModeratorPanel() {
       setChecks(checksData.checks);
       setTotal(checksData.total);
       setStats(statsData);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Не удалось загрузить данные');
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Не удалось загрузить данные');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getDangerBadge = (level: string) => {
     const normalizedLevel = level.toLowerCase();
