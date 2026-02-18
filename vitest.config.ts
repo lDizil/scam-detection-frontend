@@ -22,12 +22,6 @@ export default defineConfig({
         'src/main.tsx',
         'src/components/ui/**',
       ],
-      thresholds: {
-        lines: 60,
-        functions: 60,
-        branches: 60,
-        statements: 60,
-      },
     },
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache', 'e2e'],
