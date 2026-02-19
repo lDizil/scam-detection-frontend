@@ -1,32 +1,39 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Calendar, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Link as LinkIcon, MessageSquare, Trash2, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
+import { Calendar, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Link as LinkIcon, MessageSquare, Trash2, Image as ImageIcon, Video as VideoIcon, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { contentApi, type HistoryCheck } from '../api/content';
+import { contentApi, type HistoryCheck, type CheckFilters } from '../api/content';
 import { getFileUrl } from '../utils/fileUtils';
 
 export function AnalysisHistory() {
   const [history, setHistory] = useState<HistoryCheck[]>([]);
-  const [filteredHistory, setFilteredHistory] = useState<HistoryCheck[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 20;
 
-  const loadHistory = async (page = 1) => {
+  const [filters, setFilters] = useState<CheckFilters>({
+    page: 1,
+    limit: 20,
+    danger_level: undefined,
+    check_type: undefined,
+    status: undefined,
+    search: '',
+  });
+  const [searchInput, setSearchInput] = useState('');
+
+  const loadHistory = useCallback(async (newFilters: CheckFilters) => {
     setIsLoading(true);
     try {
-      const response = await contentApi.getHistory(page, limit);
+      const response = await contentApi.getHistory(newFilters);
       setHistory(response.checks);
-      setFilteredHistory(response.checks);
       setTotal(response.total);
       setCurrentPage(response.page);
-      setTotalPages(Math.ceil(response.total / limit));
+      setTotalPages(Math.ceil(response.total / (newFilters.limit || 20)));
     } catch (error) {
       const err = error as { response?: { status?: number }; request?: unknown };
       console.error('Failed to load history:', error);
@@ -40,19 +47,18 @@ export function AnalysisHistory() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadHistory(1);
   }, []);
 
   useEffect(() => {
-    let filtered = history;
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.danger_level === statusFilter);
-    }
-    setFilteredHistory(filtered);
-  }, [history, statusFilter]);
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    loadHistory(filters);
+  }, [filters, loadHistory]);
 
   const getStatusBadge = (dangerLevel: string, dangerScore: number) => {
     const score = dangerScore > 1 ? dangerScore : dangerScore * 100;
@@ -116,15 +122,33 @@ export function AnalysisHistory() {
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
-      loadHistory(page);
+      setFilters(prev => ({ ...prev, page }));
     }
   };
+
+  const handleFilterChange = (key: keyof CheckFilters, value: string | undefined) => {
+    setFilters(prev => ({ ...prev, [key]: value === 'all' ? undefined : value, page: 1 }));
+  };
+
+  const clearFilters = () => {
+    setSearchInput('');
+    setFilters({
+      page: 1,
+      limit: 20,
+      danger_level: undefined,
+      check_type: undefined,
+      status: undefined,
+      search: '',
+    });
+  };
+
+  const hasActiveFilters = !!(filters.danger_level || filters.check_type || filters.status || searchInput);
 
   const handleDelete = async (id: number) => {
     try {
       await contentApi.deleteCheck(id);
       toast.success('Запись удалена');
-      loadHistory(currentPage);
+      loadHistory(filters);
     } catch (error) {
       const err = error as { response?: { status?: number } };
       console.error('Failed to delete check:', error);
@@ -142,50 +166,137 @@ export function AnalysisHistory() {
     }
   };
 
-  if (isLoading && history.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-        <p className="mt-4 text-gray-600">Загрузка истории...</p>
-      </div>
-    );
-  }
-
-  if (!isLoading && history.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg text-gray-600 mb-2">История анализов пуста</h3>
-        <p className="text-gray-500">
-          Начните анализировать контент, чтобы увидеть результаты здесь
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Фильтры с повышенным z-index для правильного наложения dropdown */}
-      <div className="flex flex-wrap gap-4 items-center relative z-10">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48 bg-white">
-            <SelectValue placeholder="Статус" />
-          </SelectTrigger>
-          <SelectContent className="z-50 bg-white">
-            <SelectItem value="all">Все статусы</SelectItem>
-            <SelectItem value="low">Низкий риск</SelectItem>
-            <SelectItem value="medium">Средний риск</SelectItem>
-            <SelectItem value="high">Высокий риск</SelectItem>
-            <SelectItem value="critical">Критическая неудача</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="text-sm text-gray-600">
-          Всего записей: {total}
-        </div>
-      </div>
+      {/* Фильтры */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-4">
+            {/* Строка поиска */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Поиск по содержимому..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchInput && (
+                <button
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            
+            {/* Фильтры в одну строку */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <Select 
+                value={filters.danger_level || 'all'} 
+                onValueChange={(value) => handleFilterChange('danger_level', value)}
+              >
+                <SelectTrigger className="w-48 bg-white">
+                  <SelectValue placeholder="Уровень опасности" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Все уровни</SelectItem>
+                  <SelectItem value="low">Низкий риск</SelectItem>
+                  <SelectItem value="medium">Средний риск</SelectItem>
+                  <SelectItem value="high">Высокий риск</SelectItem>
+                  <SelectItem value="critical">Критический</SelectItem>
+                </SelectContent>
+              </Select>
 
-      <div className="space-y-4">
-        {filteredHistory.map((item) => {
+              <Select 
+                value={filters.check_type || 'all'} 
+                onValueChange={(value) => handleFilterChange('check_type', value)}
+              >
+                <SelectTrigger className="w-48 bg-white">
+                  <SelectValue placeholder="Тип контента" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Все типы</SelectItem>
+                  <SelectItem value="text">📝 Текст</SelectItem>
+                  <SelectItem value="url">🔗 URL</SelectItem>
+                  <SelectItem value="image">🖼️ Изображение</SelectItem>
+                  <SelectItem value="video">🎬 Видео</SelectItem>
+                  <SelectItem value="batch">📦 Пакет</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select 
+                value={filters.status || 'all'} 
+                onValueChange={(value) => handleFilterChange('status', value)}
+              >
+                <SelectTrigger className="w-48 bg-white">
+                  <SelectValue placeholder="Статус" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  <SelectItem value="completed">Завершено</SelectItem>
+                  <SelectItem value="processing">Обработка</SelectItem>
+                  <SelectItem value="failed">Ошибка</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearFilters}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Сбросить фильтры
+                </Button>
+              )}
+
+              <div className="ml-auto text-sm text-gray-600">
+                Всего записей: {total}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {isLoading && history.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-gray-600">Загрузка истории...</p>
+        </div>
+      ) : !isLoading && history.length === 0 ? (
+        <div className="text-center py-12">
+          <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          {hasActiveFilters ? (
+            <>
+              <h3 className="text-lg text-gray-600 mb-2">Нет результатов по выбранным фильтрам</h3>
+              <p className="text-gray-500 mb-4">
+                Попробуйте изменить параметры фильтрации
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFilters}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Сбросить фильтры
+              </Button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg text-gray-600 mb-2">История анализов пуста</h3>
+              <p className="text-gray-500">
+                Начните анализировать контент, чтобы увидеть результаты здесь
+              </p>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {history.map((item) => {
           const StatusIcon = getStatusIcon(item.danger_level, item.danger_score);
           return (
             <Card key={item.id} className="hover:shadow-md transition-shadow">
@@ -246,23 +357,23 @@ export function AnalysisHistory() {
                             className="max-w-full max-h-64 rounded-lg border-2 border-gray-300 object-contain shadow-sm"
                             onError={(e) => {
                               console.error('Failed to load image:', getFileUrl(item.file_path));
-                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `<div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                                  <p>⚠️ Изображение недоступно</p>
+                                  <p class="text-xs mt-1 text-yellow-600">Файл: ${item.file_path}</p>
+                                </div>`;
+                              }
                             }}
                           />
                         </div>
                       )}
                       
                       {item.file_path && item.content_type === 'video' && (
-                        <div className="mt-3">
-                          <video 
-                            src={getFileUrl(item.file_path)} 
-                            controls
-                            className="max-w-full max-h-64 rounded-lg border-2 border-gray-300 shadow-sm"
-                            onError={(e) => {
-                              console.error('Failed to load video:', getFileUrl(item.file_path));
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
+                        <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-800 mb-2">📹 Видео не сохраняется в системе</p>
+                          <p className="text-xs text-blue-600">Анализ выполнен по транскрипции аудио</p>
+                          <p className="text-xs text-gray-500 mt-1">Файл: {item.file_path}</p>
                         </div>
                       )}
                     </div>
@@ -293,9 +404,10 @@ export function AnalysisHistory() {
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
 
-      {totalPages > 1 && (
+      {totalPages > 1 && !isLoading && history.length > 0 && (
         <div className="flex items-center justify-center gap-2">
           <Button 
             variant="outline" 
@@ -341,12 +453,6 @@ export function AnalysisHistory() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-        </div>
-      )}
-
-      {filteredHistory.length === 0 && history.length > 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-500">Не найдено записей, соответствующих фильтрам</p>
         </div>
       )}
     </div>

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import {
   Table,
   TableBody,
@@ -11,8 +13,8 @@ import {
   TableRow,
 } from './ui/table';
 import { moderatorApi } from '../api/moderator';
-import type { HistoryCheck } from '../api/content';
-import { Activity, ChevronLeft, ChevronRight, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react';
+import type { HistoryCheck, CheckFilters } from '../api/content';
+import { Activity, ChevronLeft, ChevronRight, ShieldCheck, AlertTriangle, XCircle, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface GlobalStats {
@@ -26,20 +28,30 @@ interface GlobalStats {
 export function ModeratorPanel() {
   const [checks, setChecks] = useState<HistoryCheck[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<GlobalStats | null>(null);
-  const limit = 20;
+  const [totalPages, setTotalPages] = useState(1);
+  
+  const [filters, setFilters] = useState<CheckFilters>({
+    page: 1,
+    limit: 20,
+    danger_level: undefined,
+    check_type: undefined,
+    status: undefined,
+    search: '',
+  });
+  const [searchInput, setSearchInput] = useState('');
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (newFilters: CheckFilters) => {
     try {
       setLoading(true);
       const [checksData, statsData] = await Promise.all([
-        moderatorApi.getAllChecks(page, limit),
+        moderatorApi.getAllChecks(newFilters),
         moderatorApi.getGlobalStats(),
       ]);
       setChecks(checksData.checks);
       setTotal(checksData.total);
+      setTotalPages(Math.ceil(checksData.total / (newFilters.limit || 20)));
       setStats(statsData);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
@@ -47,11 +59,40 @@ export function ModeratorPanel() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    loadData(filters);
+  }, [filters, loadData]);
+
+  const handlePageChange = (newPage: number) => {
+    setFilters(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleFilterChange = (key: keyof CheckFilters, value: string | undefined) => {
+    setFilters(prev => ({ ...prev, [key]: value === 'all' ? undefined : value, page: 1 }));
+  };
+
+  const clearFilters = () => {
+    setSearchInput('');
+    setFilters({
+      page: 1,
+      limit: 20,
+      danger_level: undefined,
+      check_type: undefined,
+      status: undefined,
+      search: '',
+    });
+  };
+
+  const hasActiveFilters = !!(filters.danger_level || filters.check_type || filters.status || searchInput);
 
   const getDangerBadge = (level: string) => {
     const normalizedLevel = level.toLowerCase();
@@ -91,16 +132,6 @@ export function ModeratorPanel() {
     const date = new Date(dateString);
     return date.toLocaleString('ru-RU');
   };
-
-  const totalPages = Math.ceil(total / limit);
-
-  if (loading && checks.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-lg text-gray-600">Загрузка...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -168,6 +199,122 @@ export function ModeratorPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Фильтры */}
+          <div className="mb-6 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Поиск по содержимому, пользователю..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchInput && (
+                <button
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            
+            <div className="flex flex-wrap gap-3 items-center">
+              <Select 
+                value={filters.danger_level || 'all'} 
+                onValueChange={(value) => handleFilterChange('danger_level', value)}
+              >
+                <SelectTrigger className="w-48 bg-white">
+                  <SelectValue placeholder="Уровень опасности" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Все уровни</SelectItem>
+                  <SelectItem value="low">Низкий риск</SelectItem>
+                  <SelectItem value="medium">Средний риск</SelectItem>
+                  <SelectItem value="high">Высокий риск</SelectItem>
+                  <SelectItem value="critical">Критический</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select 
+                value={filters.check_type || 'all'} 
+                onValueChange={(value) => handleFilterChange('check_type', value)}
+              >
+                <SelectTrigger className="w-48 bg-white">
+                  <SelectValue placeholder="Тип контента" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Все типы</SelectItem>
+                  <SelectItem value="text">📝 Текст</SelectItem>
+                  <SelectItem value="url">🔗 URL</SelectItem>
+                  <SelectItem value="image">🖼️ Изображение</SelectItem>
+                  <SelectItem value="video">🎬 Видео</SelectItem>
+                  <SelectItem value="batch">📦 Пакет</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select 
+                value={filters.status || 'all'} 
+                onValueChange={(value) => handleFilterChange('status', value)}
+              >
+                <SelectTrigger className="w-48 bg-white">
+                  <SelectValue placeholder="Статус" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  <SelectItem value="completed">Завершено</SelectItem>
+                  <SelectItem value="processing">Обработка</SelectItem>
+                  <SelectItem value="failed">Ошибка</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearFilters}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Сбросить фильтры
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {loading && checks.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-lg text-gray-600">Загрузка...</div>
+            </div>
+          ) : !loading && checks.length === 0 ? (
+            <div className="text-center py-12">
+              <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              {hasActiveFilters ? (
+                <>
+                  <h3 className="text-lg text-gray-600 mb-2">Нет результатов по выбранным фильтрам</h3>
+                  <p className="text-gray-500 mb-4">
+                    Попробуйте изменить параметры фильтрации
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Сбросить фильтры
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg text-gray-600 mb-2">Нет проверок в системе</h3>
+                  <p className="text-gray-500">
+                    Проверки будут отображаться здесь по мере их появления
+                  </p>
+                </>
+              )}
+            </div>
+          ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -220,18 +367,20 @@ export function ModeratorPanel() {
               </TableBody>
             </Table>
           </div>
+          )}
 
-          {totalPages > 1 && (
+          {/* Пагинация */}
+          {totalPages > 1 && !loading && checks.length > 0 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-600">
-                Страница {page} из {totalPages}
+                Страница {filters.page} из {totalPages}
               </div>
               <div className="flex space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1 || loading}
+                  onClick={() => handlePageChange(Math.max(1, (filters.page || 1) - 1))}
+                  disabled={(filters.page || 1) === 1 || loading}
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Назад
@@ -239,8 +388,8 @@ export function ModeratorPanel() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages || loading}
+                  onClick={() => handlePageChange(Math.min(totalPages, (filters.page || 1) + 1))}
+                  disabled={(filters.page || 1) === totalPages || loading}
                 >
                   Вперёд
                   <ChevronRight className="h-4 w-4 ml-1" />

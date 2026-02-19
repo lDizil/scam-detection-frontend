@@ -100,6 +100,17 @@ export interface BatchAnalysisRequest {
   texts: string[];
 }
 
+export interface CheckFilters {
+  page?: number;
+  limit?: number;
+  check_type?: 'text' | 'image' | 'video' | 'url' | 'batch';
+  danger_level?: 'low' | 'medium' | 'high' | 'critical';
+  status?: 'processing' | 'completed' | 'failed';
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
 export const contentApi = {
   analyzeText: async (text: string): Promise<TextAnalysisResponse> => {
     const response = await apiClient.post<TextAnalysisResponse>(
@@ -160,10 +171,20 @@ export const contentApi = {
     return response.data;
   },
 
-  getHistory: async (page = 1, limit = 20): Promise<HistoryResponse> => {
+  getHistory: async (filters: CheckFilters = {}): Promise<HistoryResponse> => {
+    const { page = 1, limit = 20, ...restFilters } = filters;
+    const params: Record<string, string | number> = { page, limit };
+    
+    if (restFilters.check_type) params.check_type = restFilters.check_type;
+    if (restFilters.danger_level) params.danger_level = restFilters.danger_level;
+    if (restFilters.status) params.status = restFilters.status;
+    if (restFilters.search) params.search = restFilters.search;
+    if (restFilters.date_from) params.date_from = restFilters.date_from;
+    if (restFilters.date_to) params.date_to = restFilters.date_to;
+    
     const response = await apiClient.get<HistoryResponse>(
       '/analysis/history',
-      { params: { page, limit } }
+      { params }
     );
     return response.data;
   },
